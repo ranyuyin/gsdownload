@@ -214,7 +214,7 @@ def seasonal_count(df, sta_table, date_split=('1-1','4-1','7-1','10-1'), todopr=
     if todopr is not None:
         df = df.loc[df.PR.isin(todopr)]
     if encounter_slcoff is not True:
-        slc_off_date=datetime(2003,5,31)
+        slc_off_date=datetime(2003, 5, 31)
         df = df.loc[(df.SPACECRAFT_ID != 'LANDSAT_7') | (df.DATE_ACQUIRED < slc_off_date)]
     for year in range(year_start,year_end+1):
         for i, i_start in enumerate(range(len(date_split)),1):
@@ -286,11 +286,29 @@ def download_c1df_thumbnail(df, download_root):
     pd.DataFrame(data={'error_pid': errorlist}).to_csv(path.join(download_root, 'errorlist.csv'), index=False)
 
 
-def condi_thumbnail_by_pr(df, pr_list_file, date_start, date_end, n_condi, datepaser='%Y-%m-%d', ignoreSLCoff=True):
+def listlike_to_df(listlike, name, dtype, header='infer'):
+    if type(listlike) is str:
+        pr_m_list = pd.read_csv(list_file, dtype={name: dtype}, header=header)
+    elif type(listlike) is list:
+        pr_m_list = pd.DataFrame(data={name:list_file}, dtype=dtype)
+    elif type(listlike) is pd.DataFrame:
+        pr_m_list = list_file
+    else:
+        raise Exception('not supported input!')
+    return pr_m_list
+
+
+def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi, datepaser='%Y-%m-%d', ignoreSLCoff=True, mode='PR'):
     date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     if 'year' not in df.columns and 'month' not in df.columns:
         df = addyearmonth(df)
-    pr_m_list = pd.read_csv(pr_list_file, dtype={'PR': str})
+    if mode == 'PID':
+        pr_m_list = listlike_to_df(listlike, 'PID', str, header=None)
+        pr_m_list['PR'] = pr_m_list.PID.apply(pr_from_pid)
+    elif mode == 'PR':
+        pr_m_list = listlike_to_df(listlike, 'PR', str, header=None)
+    else:
+        raise Exception('unknown mode!')
     pd_condi = pd.DataFrame()
     if ignoreSLCoff:
         df = df.loc[(df.SPACECRAFT_ID!='LANDSAT_7')|(df.DATE_ACQUIRED<datetime(year=2003,month=5,day=31))]
