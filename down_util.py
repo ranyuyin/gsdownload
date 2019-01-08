@@ -298,7 +298,8 @@ def listlike_to_df(listlike, name, dtype, header='infer'):
     return pr_m_list
 
 
-def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi, datepaser='%Y-%m-%d', ignoreSLCoff=True, mode='PR'):
+def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi,
+                          datepaser='%Y-%m-%d', ignoreSLCoff=True, mode='PR'):
     date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     if 'year' not in df.columns and 'month' not in df.columns:
         df = addyearmonth(df)
