@@ -335,3 +335,4 @@ def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi,
         print('condi: {0}/{1})'.format(i_record, len(pr_m_list)))
     return pd_condi
         # pd_condi.append(thiscondi)
+# test
