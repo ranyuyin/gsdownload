@@ -240,7 +240,7 @@ def seasonal_count(df, sta_table, date_split=('1-1','4-1','7-1','10-1'), todopr=
     sta_out.to_csv(staname)
 
 
-def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist):
+def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, CLOUD_COVER=None):
     dirmaps = {'LANDSAT_1': 'landsat_mss_c1',
                'LANDSAT_2': 'landsat_mss_c1',
                'LANDSAT_3': 'landsat_mss_c1',
@@ -257,7 +257,9 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
         except:
             pass
     try:
-        down_file =  path.join(download_folder, pid+'.jpg')
+        down_file = path.join(
+            download_folder, pid+'.jpg') if CLOUD_COVER is None else path.join(
+            download_folder, "{0:.2f}".format(CLOUD_COVER)+'_'+pid+'.jpg')
         if not path.exists(down_file):
             wget.download(thumbnail_url, down_file)
         else:
@@ -277,8 +279,9 @@ def download_c1df_thumbnail(df, download_root):
         wrs_row = str(row.WRS_ROW).zfill(3)
         pid = row.PRODUCT_ID
         craft_id = row.SPACECRAFT_ID
+        CLOUD_COVER = row.CLOUD_COVER
         # print('downloading: ', pid)
-        get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist)
+        get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, CLOUD_COVER=CLOUD_COVER)
         # print('done!')
 
     Parallel(n_jobs=8)(delayed(download_row)(row, errorlist) for row in tqdm(df.itertuples()))
@@ -288,11 +291,11 @@ def download_c1df_thumbnail(df, download_root):
 
 def listlike_to_df(listlike, name, dtype, header='infer'):
     if type(listlike) is str:
-        pr_m_list = pd.read_csv(list_file, dtype={name: dtype}, header=header)
+        pr_m_list = pd.read_csv(listlike, dtype={name: dtype}, header=header, names=[name])
     elif type(listlike) is list:
-        pr_m_list = pd.DataFrame(data={name:list_file}, dtype=dtype)
+        pr_m_list = pd.DataFrame(data={name: listlike}, dtype=dtype)
     elif type(listlike) is pd.DataFrame:
-        pr_m_list = list_file
+        pr_m_list = listlike
     else:
         raise Exception('not supported input!')
     return pr_m_list
