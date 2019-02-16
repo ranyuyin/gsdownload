@@ -66,8 +66,8 @@ def addyearmonth(df):
     return df.join(year_month_pd)
 
 
-def Get_zone(df,year=None,lat=None ,months=None,inPathRows=None, exclude=None, todoPID=None, tododatepr=None, L7=False):
-    df=preprocess(df, year, L7)
+def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None, todoPID=None, tododatepr=None, SLC_off=False):
+    df = preprocess(df, year, SLC_off)
     PR = [int(str(i[0]) + str(i[1]).zfill(3)) for i in zip(df.WRS_PATH, df.WRS_ROW)]
     df['PR']=PR
     if lat is not None:
@@ -107,13 +107,14 @@ def write_subs(df,dstdir,filename,columns=['BASE_URL']):
     outframe.to_csv(path.join(dstdir, filename), index_label=False, index=False,header=False)
 
 
-def preprocess(df, year=None, L7=False):
+def preprocess(df, year=None, SLC_off=False):
     df = df.loc[df.COLLECTION_NUMBER == '01']
     if year is not None:
         if year<2003:
             L7 = True
-    if L7==False:
-        sub = df.loc[df.SPACECRAFT_ID != 'LANDSAT_7']
+    if SLC_off==False:
+        # sub = df.loc[df.SPACECRAFT_ID != 'LANDSAT_7']
+        sub = df.loc[(df.SPACECRAFT_ID!='LANDSAT_7')|(df.DATE_ACQUIRED<datetime(year=2003,month=5,day=31))]
     else:
         sub=df
     #夜间的Landsat影像云量为-1
@@ -338,4 +339,13 @@ def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi,
         print('condi: {0}/{1})'.format(i_record, len(pr_m_list)))
     return pd_condi
         # pd_condi.append(thiscondi)
-# test
+
+
+def pixfilelist2datepr(pixlist):
+    datepr = [i[7:15] + i[0:3] + i[3:6] for i in pixlist]
+    return datepr
+
+
+def pidlist2datepr(pidlist):
+    datepr = [datepr_from_pid(i) for i in pidlist]
+    return datepr
