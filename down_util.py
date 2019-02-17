@@ -250,7 +250,11 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
                'LANDSAT_7': 'landsat_etm_c1',
                'LANDSAT_8': 'landsat_8_c1'}
     baseurl = 'https://earthexplorer.usgs.gov/browse/'
-    thumbnail_url = baseurl+'/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid+'.jpg'])
+    if year is not None:
+        thumbnail_url = baseurl + '/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid + '.jpg'])
+    else:
+        year = pid.split('_')[3][:4]
+        thumbnail_url = baseurl + '/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid + '.jpg'])
     download_folder = path.join(download_root, wrs_path, wrs_row)
     while not path.exists(download_folder):
         try:
@@ -259,12 +263,14 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
             pass
     try:
         down_file = path.join(download_folder, pid+'.jpg')
+        print(downlist)
         if downlist is not None:
             downlist.append(down_file)
         # down_file = path.join(
         #     download_folder, pid+'.jpg') if CLOUD_COVER is None else path.join(
         #     download_folder, "{0:.2f}".format(CLOUD_COVER)+'_'+pid+'.jpg')
         if not path.exists(down_file):
+            # print(thumbnail_url, down_file)
             wget.download(thumbnail_url, down_file)
         else:
             print('skip!')
@@ -278,13 +284,18 @@ def download_c1df_thumbnail(df, download_root):
     errorlist = []
     downlist = []
     def download_row(row, errorlist, downlist=None):
-        year = str(row.year)
+        try:
+            year = str(row.year)
+        except:
+            year = None
         wrs_path = str(row.WRS_PATH).zfill(3)
         wrs_row = str(row.WRS_ROW).zfill(3)
         pid = row.PRODUCT_ID
         craft_id = row.SPACECRAFT_ID
         # CLOUD_COVER = row.CLOUD_COVER
         # print('downloading: ', pid)
+        # print(122)
+        # print(downlist)
         get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist)
         # print('done!')
 
@@ -387,7 +398,9 @@ def hist_score(imgQ, imgD, bins=51, inrange=(0, 255)):
     return scores.mean()
 
 
-def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True, debug=False):
+def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d'):
+
+    date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     # Get candidate PID list for df
     from skimage import io
     pr = path.splitext(path.basename(ref_path))[0]
@@ -396,6 +409,7 @@ def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True,
     candi_jpg_list = download_c1df_thumbnail(candi_df, thumb_root)
     imgQ = io.imread(ref_path)
     scores = []
+    print(candi_jpg_list)
     for candi_img in candi_jpg_list:
         imgD = io.imread(candi_img)
         this_score = hist_score(imgQ, imgD)
