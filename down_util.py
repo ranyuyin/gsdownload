@@ -66,8 +66,8 @@ def addyearmonth(df):
     return df.join(year_month_pd)
 
 
-def Get_zone(df,year=None,lat=None ,months=None,inPathRows=None, exclude=None, todoPID=None, tododatepr=None, L7=False):
-    df=preprocess(df, year, L7)
+def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None, todoPID=None, tododatepr=None, SLC_off=False):
+    df = preprocess(df, year, SLC_off)
     PR = [int(str(i[0]) + str(i[1]).zfill(3)) for i in zip(df.WRS_PATH, df.WRS_ROW)]
     df['PR']=PR
     if lat is not None:
@@ -107,13 +107,14 @@ def write_subs(df,dstdir,filename,columns=['BASE_URL']):
     outframe.to_csv(path.join(dstdir, filename), index_label=False, index=False,header=False)
 
 
-def preprocess(df, year=None, L7=False):
+def preprocess(df, year=None, SLC_off=False):
     df = df.loc[df.COLLECTION_NUMBER == '01']
     if year is not None:
         if year<2003:
             L7 = True
-    if L7==False:
-        sub = df.loc[df.SPACECRAFT_ID != 'LANDSAT_7']
+    if SLC_off==False:
+        # sub = df.loc[df.SPACECRAFT_ID != 'LANDSAT_7']
+        sub = df.loc[(df.SPACECRAFT_ID!='LANDSAT_7')|(df.DATE_ACQUIRED<datetime(year=2003,month=5,day=31))]
     else:
         sub=df
     #夜间的Landsat影像云量为-1
@@ -260,6 +261,9 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
         down_file = path.join(download_folder, pid+'.jpg')
         if downlist is not None:
             downlist.append(down_file)
+        # down_file = path.join(
+        #     download_folder, pid+'.jpg') if CLOUD_COVER is None else path.join(
+        #     download_folder, "{0:.2f}".format(CLOUD_COVER)+'_'+pid+'.jpg')
         if not path.exists(down_file):
             wget.download(thumbnail_url, down_file)
         else:
@@ -279,6 +283,7 @@ def download_c1df_thumbnail(df, download_root):
         wrs_row = str(row.WRS_ROW).zfill(3)
         pid = row.PRODUCT_ID
         craft_id = row.SPACECRAFT_ID
+        # CLOUD_COVER = row.CLOUD_COVER
         # print('downloading: ', pid)
         get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist)
         # print('done!')
@@ -292,11 +297,11 @@ def download_c1df_thumbnail(df, download_root):
 
 def listlike_to_df(listlike, name, dtype, header='infer'):
     if type(listlike) is str:
-        pr_m_list = pd.read_csv(list_file, dtype={name: dtype}, header=header)
+        pr_m_list = pd.read_csv(listlike, dtype={name: dtype}, header=header, names=[name])
     elif type(listlike) is list:
-        pr_m_list = pd.DataFrame(data={name:list_file}, dtype=dtype)
+        pr_m_list = pd.DataFrame(data={name: listlike}, dtype=dtype)
     elif type(listlike) is pd.DataFrame:
-        pr_m_list = list_file
+        pr_m_list = listlike
     else:
         raise Exception('not supported input!')
     return pr_m_list
@@ -340,6 +345,15 @@ def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi,
     return pd_condi
         # pd_condi.append(thiscondi)
 
+
+def pixfilelist2datepr(pixlist):
+    datepr = [i[7:15] + i[0:3] + i[3:6] for i in pixlist]
+    return datepr
+
+
+def pidlist2datepr(pidlist):
+    datepr = [datepr_from_pid(i) for i in pidlist]
+    return datepr
 
 def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True):
     pd_condi = pd.DataFrame()
