@@ -158,7 +158,7 @@ def zone_download(ldst_df, year, dstdir, columns=['BASE_URL'], PathRows = None, 
     # adopt_tropic.BASE_URL.to_csv(r"C:\Users\ranyu\Desktop\tropic2016_l8.csv",index_label=False, index=False)
 
 
-def add_prefix(filename,prefix):
+def add_prefix(filename, prefix):
     return path.join(path.split(filename)[0], prefix+'_'+path.split(filename)[1])
 
 
@@ -240,7 +240,7 @@ def seasonal_count(df, sta_table, date_split=('1-1','4-1','7-1','10-1'), todopr=
     sta_out.to_csv(staname)
 
 
-def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist):
+def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist=None):
     dirmaps = {'LANDSAT_1': 'landsat_mss_c1',
                'LANDSAT_2': 'landsat_mss_c1',
                'LANDSAT_3': 'landsat_mss_c1',
@@ -257,7 +257,9 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
         except:
             pass
     try:
-        down_file =  path.join(download_folder, pid+'.jpg')
+        down_file = path.join(download_folder, pid+'.jpg')
+        if downlist is not None:
+            downlist.append(down_file)
         if not path.exists(down_file):
             wget.download(thumbnail_url, down_file)
         else:
@@ -270,20 +272,22 @@ def download_c1df_thumbnail(df, download_root):
     # df = addyearmonth(df)
     i = 0
     errorlist = []
-
-    def download_row(row, errorlist):
+    downlist = []
+    def download_row(row, errorlist, downlist=None):
         year = str(row.year)
         wrs_path = str(row.WRS_PATH).zfill(3)
         wrs_row = str(row.WRS_ROW).zfill(3)
         pid = row.PRODUCT_ID
         craft_id = row.SPACECRAFT_ID
         # print('downloading: ', pid)
-        get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist)
+        get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist)
         # print('done!')
 
-    Parallel(n_jobs=8)(delayed(download_row)(row, errorlist) for row in tqdm(df.itertuples()))
+    Parallel(n_jobs=8)(delayed(download_row)(row, errorlist, downlist) for row in tqdm(df.itertuples()))
 
     pd.DataFrame(data={'error_pid': errorlist}).to_csv(path.join(download_root, 'errorlist.csv'), index=False)
+    if downlist is not None:
+        return downlist
 
 
 def listlike_to_df(listlike, name, dtype, header='infer'):
@@ -335,3 +339,55 @@ def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi,
         print('condi: {0}/{1})'.format(i_record, len(pr_m_list)))
     return pd_condi
         # pd_condi.append(thiscondi)
+
+
+def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True):
+    pd_condi = pd.DataFrame()
+    if ignoreSLCoff:
+        df = df.loc[(df.SPACECRAFT_ID != 'LANDSAT_7') | (df.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
+    thiscandi = df.loc[(df.WRS_PATH == wrs_path) &
+                       (df.WRS_ROW == wrs_row) &
+                       (df.DATE_ACQUIRED > date_start) &
+                       (df.DATE_ACQUIRED < date_end)]
+    return thiscandi
+
+
+def hist_score(imgQ, imgD, bins=51, inrange=(0, 255)):
+    from skimage import color
+    scores = []
+    for i in range(3):
+        histQ, _ = np.histogram(imgQ[:, :, i].flatten(), bins=bins, range=inrange)
+        histQ = histQ/(imgQ.shape[0] * imgQ.shape[1])
+        histD, _ = np.histogram(imgD[:, :, i].flatten(), bins=bins, range=inrange)
+        histD = histD/(imgD.shape[0] * imgD.shape[1])
+        scores.append(np.vstack((histQ, histD)).min(axis=0).sum() / histQ.sum())
+    hsvQ = color.rgb2hsv(imgQ)
+    hsvD = color.rgb2hsv(imgD)
+    for i in range(3):
+        histQ, _ = np.histogram(hsvQ[:, :, i].flatten(), bins=bins, range=inrange)
+        histQ = histQ/(hsvQ.shape[0] * hsvQ.shape[1])
+        histD, _ = np.histogram(hsvD[:, :, i].flatten(), bins=bins, range=inrange)
+        histD = histD/(hsvD.shape[0] * hsvD.shape[1])
+        scores.append(np.vstack((histQ, histD)).min(axis=0).sum() / histQ.sum())
+    scores = np.array(scores)
+    return scores.mean()
+
+
+def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True, debug=False):
+    # Get candidate PID list for df
+    from skimage import io
+    pr = path.splitext(path.basename(ref_path))[0]
+    wrs_path, wrs_row = int(pr[:3]), int(pr[3:])
+    candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=ignoreSLCoff)
+    candi_jpg_list = download_c1df_thumbnail(candi_df, thumb_root)
+    imgQ = io.imread(ref_path)
+    scores = []
+    for candi_img in candi_jpg_list:
+        imgD = io.imread(candi_img)
+        this_score = hist_score(imgQ, imgD)
+        if debug:
+            os.renames(candi_img, add_prefix("{0:.2f}".format(this_score)))
+        scores.append(this_score)
+    scores = np.array(scores)
+    return candi_jpg_list[scores.argmin()]
+
