@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from tqdm import tqdm
 from joblib import Parallel, delayed
+import shutil
 import importlib # 可用于reload库
 
 
@@ -263,7 +264,7 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
             pass
     try:
         down_file = path.join(download_folder, pid+'.jpg')
-        print(downlist)
+        # print(downlist)
         if downlist is not None:
             downlist.append(down_file)
         # down_file = path.join(
@@ -299,7 +300,7 @@ def download_c1df_thumbnail(df, download_root):
         get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist)
         # print('done!')
 
-    Parallel(n_jobs=8)(delayed(download_row)(row, errorlist, downlist) for row in tqdm(df.itertuples()))
+    Parallel(n_jobs=8, require='sharedmem')(delayed(download_row)(row, errorlist, downlist) for row in tqdm(df.itertuples()))
 
     pd.DataFrame(data={'error_pid': errorlist}).to_csv(path.join(download_root, 'errorlist.csv'), index=False)
     if downlist is not None:
@@ -389,9 +390,9 @@ def hist_score(imgQ, imgD, bins=51, inrange=(0, 255)):
     hsvQ = color.rgb2hsv(imgQ)
     hsvD = color.rgb2hsv(imgD)
     for i in range(3):
-        histQ, _ = np.histogram(hsvQ[:, :, i].flatten(), bins=bins, range=inrange)
+        histQ, _ = np.histogram(hsvQ[:, :, i].flatten(), bins=bins, range=(0, 1))
         histQ = histQ/(hsvQ.shape[0] * hsvQ.shape[1])
-        histD, _ = np.histogram(hsvD[:, :, i].flatten(), bins=bins, range=inrange)
+        histD, _ = np.histogram(hsvD[:, :, i].flatten(), bins=bins, range=(0, 1))
         histD = histD/(hsvD.shape[0] * hsvD.shape[1])
         scores.append(np.vstack((histQ, histD)).min(axis=0).sum() / histQ.sum())
     scores = np.array(scores)
@@ -409,13 +410,31 @@ def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True,
     candi_jpg_list = download_c1df_thumbnail(candi_df, thumb_root)
     imgQ = io.imread(ref_path)
     scores = []
-    print(candi_jpg_list)
-    for candi_img in candi_jpg_list:
+    # print(candi_jpg_list)
+    for id, candi_img in enumerate(candi_jpg_list):
         imgD = io.imread(candi_img)
         this_score = hist_score(imgQ, imgD)
         if debug:
-            os.renames(candi_img, add_prefix("{0:.2f}".format(this_score)))
+            newname = add_prefix(candi_img, "{0:.2f}".format(this_score))
+            os.renames(candi_img, newname)
+            candi_jpg_list[id] = newname
         scores.append(this_score)
     scores = np.array(scores)
-    return candi_jpg_list[scores.argmin()]
+    return candi_jpg_list[scores.argmax()]
+
+
+def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
+                   ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='', df=None):
+    if df is None:
+        df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
+    bestlist = []
+    prlist = pd.read_csv(prlistfile, header=None, names=['PR'])
+    for pr in prlist:
+        ref_path = glob(path.join(ref_root, pr+'*'))[0]
+        bestlist.append(Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
+                  debug=debug, datepaser=datepaser))
+    if copydir is '':
+        for impath in bestlist:
+            shutil.copy(impath, copydir)
+    return bestlist
 
