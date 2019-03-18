@@ -412,6 +412,9 @@ def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True,
     scores = []
     # print(candi_jpg_list)
     for id, candi_img in enumerate(candi_jpg_list):
+        if not path.exists(candi_img):
+            scores.append(0)
+            continue
         imgD = io.imread(candi_img)
         this_score = hist_score(imgQ, imgD)
         if debug:
@@ -428,12 +431,13 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     if df is None:
         df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
     bestlist = []
-    prlist = pd.read_csv(prlistfile, header=None, names=['PR'])
-    for pr in prlist:
+    prlist = pd.read_csv(prlistfile, header=None, names=['PR'], dtype={'PR':str})
+    for pr in prlist.PR:
+        print(path.join(ref_root, pr+'*'))
         ref_path = glob(path.join(ref_root, pr+'*'))[0]
         bestlist.append(Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
                   debug=debug, datepaser=datepaser))
-    if copydir is '':
+    if copydir is not '':
         for impath in bestlist:
             shutil.copy(impath, copydir)
     return bestlist

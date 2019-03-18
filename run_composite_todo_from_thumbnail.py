@@ -18,4 +18,4 @@ if __name__ == '__main__':
     existpr_list = [i[1]+i[2] for i in existpr_list]
     exist_df = DataFrame(data={'PR': existpr_list})
     final_pr = alltododf.loc[~alltododf['PR'].isin(exist_df['PR'])]
-    final_pr.to_csv(r'Z:\yinry\global_mosaic\2018\2018.thumb.all\to_composite2.csv', index=Falseniz)
+    final_pr.to_csv(r'Z:\yinry\global_mosaic\2018\2018.thumb.all\to_composite2.csv', index=False)
