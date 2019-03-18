@@ -4,12 +4,13 @@ from glob import glob
 from os import path
 import os
 import re, wget
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from datetime import datetime
 from tqdm import tqdm
 from joblib import Parallel, delayed
 import shutil
 import importlib # 可用于reload库
+# import importlib # 可用于reload库
 
 
 def count(l5index, prlist, step=5):
@@ -295,8 +296,6 @@ def download_c1df_thumbnail(df, download_root):
         craft_id = row.SPACECRAFT_ID
         # CLOUD_COVER = row.CLOUD_COVER
         # print('downloading: ', pid)
-        # print(122)
-        # print(downlist)
         get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist)
         # print('done!')
 
