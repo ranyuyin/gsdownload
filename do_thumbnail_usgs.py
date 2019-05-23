@@ -17,15 +17,15 @@ if __name__=='__main__':
     # down_util.download_c1df_thumbnail(condi_df,
     #                                   r'D:\PROJECT\A_Project\global_download\2000\cloud2000.thumbnail')
 
-    pr_lists = [r"Z:\yinry\global_mosaic\2018.thumb.all\pid.txt"]
+    pr_lists = [r"Z:\yinry\china.mosaic\china.path.raw.csv"]
     down_root = r'Z:\yinry\global_mosaic\2018.thumb.all'
 
     condi_df_list = []
 
     for i, one_pr_list in enumerate(pr_lists):
         # condi_df_list.append([])
-        startdate = '2017-10-01'
-        enddate = '2018-12-31'
+        startdate = '1990-01-01'
+        enddate = '1990-12-31'
         this_condi = down_util.condi_thumbnail_by_pr(df, one_pr_list, startdate, enddate, 20, mode='PID')
         # this_down_root = path.join(down_root, str(year))
         down_util.download_c1df_thumbnail(this_condi, down_root)

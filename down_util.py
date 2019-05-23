@@ -98,8 +98,8 @@ def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None
         df = df.loc[df['datepr'].isin(tododatepr)]
         return df
     df = df.sort_values(by=['CLOUD_COVER'])
-    adopt = df.loc[df.duplicated(['PR'])==False]
-    return adopt
+    # adopt = df.loc[df.duplicated(['PR'])==False]
+    return df
 
 
 def write_subs(df,dstdir,filename,columns=['BASE_URL']):
@@ -235,7 +235,7 @@ def seasonal_count(df, sta_table, date_split=('1-1','4-1','7-1','10-1'), todopr=
             percentile = len(this_date_splite_pd.loc[this_date_splite_pd[str(year)+'_'+str(i)]>0])/len(todopr)
             seasonlist.append(str(year)+'_'+str(i))
             percentilelist.append(percentile)
-    sta_out = pd.DataFrame(data={'year_season':seasonlist,'cover_percent':percentilelist})
+    sta_out = pd.DataFrame(data={'year_season':seasonlist, 'cover_percent':percentilelist})
     allpd_out = allpd_out.fillna(0)
     allpd_out.to_csv(sta_table)
     staname = path.splitext(sta_table)[0]+'_sta.csv'
