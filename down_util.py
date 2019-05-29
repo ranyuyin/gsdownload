@@ -405,14 +405,27 @@ def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True,
     from skimage import io
     pr = path.splitext(path.basename(ref_path))[0]
     wrs_path, wrs_row = int(pr[:3]), int(pr[3:])
-    candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=ignoreSLCoff)
+    cach_candi = '{}_{}_{}_{}.csv'.format(str(wrs_path).zfill(3),
+                                                                 str(wrs_row).zfill(3),
+                                                                 datetime.strftime(date_start, '%Y%m%d'),
+                                                                 datetime.strftime(date_end, '%Y%m%d'))
+    cach_candi_path = path.join(thumb_root, cach_candi)
+    if not path.exists(cach_candi_path):
+        candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=ignoreSLCoff)
+        candi_df.to_csv(cach_candi_path)
+    else:
+        candi_df = pd.read_csv(cach_candi_path)
     candi_jpg_list = download_c1df_thumbnail(candi_df, thumb_root)
+    if len(candi_jpg_list) == 0:
+        return None
     imgQ = io.imread(ref_path)
     scores = []
+    CCS = []
     # print(candi_jpg_list)
     for id, candi_img in enumerate(candi_jpg_list):
         if not path.exists(candi_img):
             scores.append(0)
+            CCS.append(100)
             continue
         imgD = io.imread(candi_img)
         this_score = hist_score(imgQ, imgD)
@@ -421,8 +434,14 @@ def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True,
             os.renames(candi_img, newname)
             candi_jpg_list[id] = newname
         scores.append(this_score)
+        pid = path.splitext(path.basename(candi_img))[0]
+        CCS.append(list(candi_df.loc[candi_df.PRODUCT_ID == pid].CLOUD_COVER)[0])
     scores = np.array(scores)
-    return candi_jpg_list[scores.argmax()]
+    CCS = np.array(CCS)
+    CCS[scores < 0.5] = 100
+    if CCS.min() == 100:
+        return None
+    return candi_jpg_list[CCS.argmin()]
 
 
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
@@ -433,11 +452,15 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     prlist = pd.read_csv(prlistfile, header=None, names=['PR'], dtype={'PR':str})
     for pr in prlist.PR:
         print(path.join(ref_root, pr+'*'))
-        ref_path = glob(path.join(ref_root, pr+'*'))[0]
+        ref_candi_list = glob(path.join(ref_root, pr + '*'))
+        if len(ref_candi_list) == 0:
+            continue
+        ref_path = ref_candi_list[0]
         bestlist.append(Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
                   debug=debug, datepaser=datepaser))
     if copydir is not '':
         for impath in bestlist:
-            shutil.copy(impath, copydir)
+            if impath is not None:
+                shutil.copy(impath, copydir)
     return bestlist
 

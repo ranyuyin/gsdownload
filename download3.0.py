@@ -18,5 +18,5 @@ if __name__=='__main__':
         dstdir=os.path.join(downloaddir,pr[:3],pr[3:])
         if not os.path.exists(dstdir):
             os.makedirs(dstdir)
-        os.system('type {0} | gsutil -m cp -r -n -I {1}'.format(file,dstdir))
+        os.system('type {0} | gsutil -m cp -r -n -I {1}'.format(file, dstdir))
         os.remove(file)

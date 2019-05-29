@@ -17,16 +17,19 @@ if __name__=='__main__':
     # down_util.download_c1df_thumbnail(condi_df,
     #                                   r'D:\PROJECT\A_Project\global_download\2000\cloud2000.thumbnail')
 
-    pr_lists = [r"Z:\yinry\china.mosaic\china.path.raw.csv"]
-    down_root = r'Z:\yinry\global_mosaic\2018.thumb.all'
-
-    condi_df_list = []
-
-    for i, one_pr_list in enumerate(pr_lists):
-        # condi_df_list.append([])
-        startdate = '1990-01-01'
-        enddate = '1990-12-31'
-        this_condi = down_util.condi_thumbnail_by_pr(df, one_pr_list, startdate, enddate, 20, mode='PID')
-        # this_down_root = path.join(down_root, str(year))
-        down_util.download_c1df_thumbnail(this_condi, down_root)
+    pr_lists = [r"Z:\yinry\china.mosaic\china.pr.txt"]
+    down_root = r'Z:\yinry\china.mosaic\1990\thumbnail'
+    ref_root = r'Z:\yinry\global_mosaic\global_thumbnail_ref\global_thumbnail_0203'
+    # condi_df_list = []
+    #
+    # for i, one_pr_list in enumerate(pr_lists):
+    #     # condi_df_list.append([])
+    startdate = '1990-03-01'
+    enddate = '1990-11-30'
+    thumb_root = r'Z:\yinry\china.mosaic\1990\thumbnail'
+    #     this_condi = down_util.condi_thumbnail_by_pr(df, one_pr_list, startdate, enddate, 20, mode='PR')
+    #     # this_down_root = path.join(down_root, str(year))
+    #     down_util.download_c1df_thumbnail(this_condi, down_root)
+    good = down_util.BestsceneWoker(ref_root, pr_lists[0], startdate, enddate, thumb_root, copydir=r'Z:\yinry\china.mosaic\1990\good')
+    pd.DataFrame(data={'good': good}).to_csv(r'Z:\yinry\china.mosaic\1990\thumbnail\good.csv', index=False, header=False)
     exit(0)
