@@ -366,6 +366,7 @@ def pidlist2datepr(pidlist):
     datepr = [datepr_from_pid(i) for i in pidlist]
     return datepr
 
+
 def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True):
     pd_condi = pd.DataFrame()
     if ignoreSLCoff:
@@ -446,17 +447,22 @@ def Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=True,
 
 
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
-                   ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='', df=None):
+                   ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='', df=None, monthlist=None):
     if df is None:
         df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
+    if monthlist is not None and type(monthlist) is list:
+        df = filtermonth(df, monthlist)
     bestlist = []
     prlist = pd.read_csv(prlistfile, header=None, names=['PR'], dtype={'PR':str})
+    ref_path_list = []
     for pr in prlist.PR:
         print(path.join(ref_root, pr+'*'))
         ref_candi_list = glob(path.join(ref_root, pr + '*'))
         if len(ref_candi_list) == 0:
             continue
-        ref_path = ref_candi_list[0]
+        ref_path_list.append(ref_candi_list[0])
+        # todo: filter month
+    for ref_path in ref_path_list:
         bestlist.append(Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
                   debug=debug, datepaser=datepaser))
     if copydir is not '':
@@ -465,3 +471,6 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                 shutil.copy(impath, copydir)
     return bestlist
 
+
+def filtermonth(df, monthlist):
+    return df
