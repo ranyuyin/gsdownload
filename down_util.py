@@ -373,7 +373,8 @@ def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff
     thiscandi = df.loc[(df.WRS_PATH == wrs_path) &
                        (df.WRS_ROW == wrs_row) &
                        (df.DATE_ACQUIRED > date_start) &
-                       (df.DATE_ACQUIRED < date_end)]
+                       (df.DATE_ACQUIRED < date_end) &
+                       (df.CLOUD_COVER < 20)]
     return thiscandi
 
 
