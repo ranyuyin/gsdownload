@@ -63,9 +63,13 @@ def df_lnst_pool(filename):
 
 def addyearmonth(df):
     df.reset_index(inplace=True, drop=True)
-    year_month_list = [(item.year, item.month) for item in df.DATE_ACQUIRED]
-    year_month_pd = pd.DataFrame(year_month_list, columns=['year', 'month'])
-    return df.join(year_month_pd)
+    # year_month_list = [(item.year, item.month) for item in df.DATE_ACQUIRED]
+    month_list = [item.month for item in df.DATE_ACQUIRED]
+    year_list = [item.year for item in df.DATE_ACQUIRED]
+    df['year'] = year_list
+    df['month'] = month_list
+    # year_month_pd = pd.DataFrame(year_month_list, columns=['year', 'month'])
+    return df
 
 
 def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None, todoPID=None, tododatepr=None, SLC_off=False):
@@ -166,10 +170,10 @@ def add_prefix(filename, prefix):
 
 
 # get landsat collection
-def split_collection(filename, write=False):
+def split_collection(filename, write=False, nrows=None):
     df = pd.read_csv(filename, usecols=['SCENE_ID', 'PRODUCT_ID', 'SENSOR_ID', 'SPACECRAFT_ID', 'DATE_ACQUIRED', 'COLLECTION_NUMBER',
                                              'COLLECTION_CATEGORY', 'WRS_PATH', 'WRS_ROW', 'CLOUD_COVER', 'BASE_URL','NORTH_LAT'],
-                          dtype={'COLLECTION_NUMBER': str}, parse_dates=['DATE_ACQUIRED'])
+                          dtype={'COLLECTION_NUMBER': str}, parse_dates=['DATE_ACQUIRED'], nrows=nrows)
     c1 = df.loc[df.COLLECTION_NUMBER=='01']
     cpre = df.loc[df.COLLECTION_NUMBER=='PRE']
     if write:
@@ -473,4 +477,6 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 
 
 def filtermonth(df, monthlist):
+    df = addyearmonth(df)
+    df = df.loc[df['month'].isin(monthlist)]
     return df
