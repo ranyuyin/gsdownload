@@ -30,6 +30,8 @@ if __name__=='__main__':
     #     this_condi = down_util.condi_thumbnail_by_pr(df, one_pr_list, startdate, enddate, 20, mode='PR')
     #     # this_down_root = path.join(down_root, str(year))
     #     down_util.download_c1df_thumbnail(this_condi, down_root)
-    good = down_util.BestsceneWoker(ref_root, pr_lists[0], startdate, enddate, thumb_root, copydir=r'Z:\yinry\china.mosaic\basemap0620\good', df=df, monthlist=[5, 6, 7, 8, 9])
+    good = down_util.BestsceneWoker(ref_root, pr_lists[0], startdate, enddate, thumb_root,
+                                    copydir=r'Z:\yinry\china.mosaic\basemap0620\good', df=df,
+                                    monthlist=[5, 6, 7, 8, 9], nprocess=36)
     pd.DataFrame(data={'good': good}).to_csv(r'Z:\yinry\china.mosaic\basemap0620\thumbnail\good.csv', index=False, header=False)
     exit(0)

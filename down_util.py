@@ -418,7 +418,7 @@ def hist_score(imgQ, imgD, bins=51, inrange=(0, 255)):
     return scores.mean()
 
 
-def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d'):
+def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir=''):
 
     date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     # Get candidate PID list for df
@@ -461,13 +461,19 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
     CCS[scores < 0.5] = 100
     if CCS.min() == 100:
         return None
-    return candi_jpg_list[CCS.argmin()]
+    best = candi_jpg_list[CCS.argmin()]
+    if copydir is not '':
+        if best is not None:
+            shutil.copy(best, copydir)
+    return best
 
 
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
                    df=None, monthlist=None, nprocess=4, PRnames=None):
     from multiprocessing import Pool
+    from functools import partial
+
     if copydir is not '' and path.exists(copydir) is False:
         os.makedirs(copydir)
     if path.exists(thumb_root) is False:
