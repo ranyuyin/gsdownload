@@ -73,6 +73,7 @@ def addyearmonth(df):
 
 
 def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None, todoPID=None, todoSID=None,tododatepr=None, SLC_off=False):
+
     df = preprocess(df, year, SLC_off)
     PR = [int(str(i[0]) + str(i[1]).zfill(3)) for i in zip(df.WRS_PATH, df.WRS_ROW)]
     df['PR']=PR
