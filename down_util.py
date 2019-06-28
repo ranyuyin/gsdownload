@@ -5,7 +5,7 @@ from os import path
 import os
 import re, wget
 # import matplotlib.pyplot as plt
-from datetime import datetime
+from datetime import datetime, timedelta
 from tqdm import tqdm
 from joblib import Parallel, delayed
 import shutil
@@ -72,7 +72,7 @@ def addyearmonth(df):
     return df
 
 
-def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None, todoPID=None, tododatepr=None, SLC_off=False):
+def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None, todoPID=None, todoSID=None,tododatepr=None, SLC_off=False):
     df = preprocess(df, year, SLC_off)
     PR = [int(str(i[0]) + str(i[1]).zfill(3)) for i in zip(df.WRS_PATH, df.WRS_ROW)]
     df['PR']=PR
@@ -93,6 +93,13 @@ def Get_zone(df, year=None, lat=None, months=None, inPathRows=None, exclude=None
                   zip(df.DATE_ACQUIRED,df.WRS_PATH, df.WRS_ROW)]
         df['datepr'] = datepr
         tododateprlist = [datepr_from_pid(i) for i in todoPID]
+        df = df.loc[df['datepr'].isin(tododateprlist)]
+        return df
+    if todoSID is not None:
+        datepr = [i[0].strftime('%Y%m%d') + str(i[1]).zfill(3) + str(i[2]).zfill(3) for i in
+                  zip(df.DATE_ACQUIRED,df.WRS_PATH, df.WRS_ROW)]
+        df['datepr'] = datepr
+        tododateprlist = [datepr_from_sid(i) for i in todoSID]
         df = df.loc[df['datepr'].isin(tododateprlist)]
         return df
     if tododatepr is not None:
@@ -186,6 +193,13 @@ def datepr_from_pid(pid):
     parten = '^.{4}_.{4}_(...)(...)_(.{4})(..)(..).*'
     _, wrs_path, wrs_row, year, month, day, _ = re.split(parten, pid)
     return datetime(int(year), int(month), int(day)).strftime('%Y%m%d') + wrs_path + wrs_row
+
+
+def datepr_from_sid(sid):
+    parten = '...(...)(...)(....)(...).*'
+    _, wrs_path, wrs_row, year, DOY = re.split(parten, sid)
+    date = datetime(int(year), 1, 1) + timedelta(int(DOY) - 1)
+    return date.strftime('%Y%m%d') + wrs_path + wrs_row
 
 
 def pr_from_pid(pid):
@@ -451,12 +465,14 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
 
 
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
-                   ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='', df=None, monthlist=None, nprocess=4):
+                   ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
+                   df=None, monthlist=None, nprocess=4, PRnames=None):
     from multiprocessing import Pool
     if copydir is not '' and path.exists(copydir) is False:
         os.makedirs(copydir)
     if path.exists(thumb_root) is False:
         os.makedirs(thumb_root)
+
     def worker(ref_path):
         best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
                   debug=debug, datepaser=datepaser)
@@ -464,12 +480,16 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
             if best is not None:
                 shutil.copy(best, copydir)
         return best
+
     if df is None:
         df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
     if monthlist is not None and type(monthlist) is list:
         df = filtermonth(df, monthlist)
     bestlist = []
-    prlist = pd.read_csv(prlistfile, header=None, names=['PR'], dtype={'PR':str})
+    # todo: add filter by m_start and m_end
+    prlist = pd.read_csv(prlistfile, names=PRnames, dtype={'PR': str})
+    if 'm_start' in prlist.columns and 'm_end' in prlist.columns:
+        monthfilter = True
     ref_path_list = []
     for pr in prlist.PR:
         print(path.join(ref_root, pr+'*'))
