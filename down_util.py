@@ -419,7 +419,8 @@ def hist_score(imgQ, imgD, bins=51, inrange=(0, 255)):
     return scores.mean()
 
 
-def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir=''):
+def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False,
+              datepaser='%Y-%m-%d', copydir='', monthlist=None):
 
     date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     # Get candidate PID list for df
@@ -432,7 +433,8 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
                                                                  datetime.strftime(date_end, '%Y%m%d'))
     cach_candi_path = path.join(thumb_root, cach_candi)
     if not path.exists(cach_candi_path):
-        candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=ignoreSLCoff)
+        candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df,
+                                      ignoreSLCoff=ignoreSLCoff, monthlist=monthlist)
         candi_df.to_csv(cach_candi_path)
     else:
         candi_df = pd.read_csv(cach_candi_path)
@@ -471,7 +473,7 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
 
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
-                   df=None, monthlist=None, nprocess=4, PRnames=None):
+                   df=None, Global_monthlist=None, nprocess=4, PRnames=None):
     from multiprocessing import Pool
     from functools import partial
 
@@ -482,8 +484,11 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 
     def worker(input):
         ref_path, m_start, m_end = input
+        if m_end < m_start:
+            m_end += 12
+        monthlist = [i % 12 if (i % 12) != 0 else 12 for i in list(range(m_start, m_end+1))]
         best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
-                  debug=debug, datepaser=datepaser)
+                  debug=debug, datepaser=datepaser, monthlist=monthlist)
         if copydir is not '':
             if best is not None:
                 shutil.copy(best, copydir)
@@ -491,8 +496,8 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 
     if df is None:
         df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
-    if monthlist is not None and type(monthlist) is list:
-        df = filtermonth(df, monthlist)
+    if Global_monthlist is not None and type(Global_monthlist) is list:
+        df = filtermonth(df, Global_monthlist)
     bestlist = []
     # todo: add filter by m_start and m_end
     prlist = pd.read_csv(prlistfile, names=PRnames, dtype={'PR': str})
