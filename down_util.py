@@ -123,9 +123,6 @@ def write_subs(df,dstdir,filename,columns=['BASE_URL']):
 
 def preprocess(df, year=None, SLC_off=False):
     df = df.loc[df.COLLECTION_NUMBER == '01']
-    if year is not None:
-        if year<2003:
-            L7 = True
     if SLC_off==False:
         # sub = df.loc[df.SPACECRAFT_ID != 'LANDSAT_7']
         sub = df.loc[(df.SPACECRAFT_ID!='LANDSAT_7')|(df.DATE_ACQUIRED<datetime(year=2003,month=5,day=31))]
@@ -198,7 +195,8 @@ def datepr_from_pid(pid):
 
 def datepr_from_sid(sid):
     parten = '...(...)(...)(....)(...).*'
-    _, wrs_path, wrs_row, year, DOY = re.split(parten, sid)
+    # print(re.split(parten, sid))
+    _, wrs_path, wrs_row, year, DOY, _ = re.split(parten, sid)
     date = datetime(int(year), 1, 1) + timedelta(int(DOY) - 1)
     return date.strftime('%Y%m%d') + wrs_path + wrs_row
 
@@ -386,8 +384,10 @@ def pidlist2datepr(pidlist):
     return datepr
 
 
-def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True):
+def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True, monthlist=None):
     pd_condi = pd.DataFrame()
+    if monthlist is not None:
+        df = filtermonth(df, monthlist)
     if ignoreSLCoff:
         df = df.loc[(df.SPACECRAFT_ID != 'LANDSAT_7') | (df.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
     thiscandi = df.loc[(df.WRS_PATH == wrs_path) &
@@ -480,7 +480,8 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     if path.exists(thumb_root) is False:
         os.makedirs(thumb_root)
 
-    def worker(ref_path):
+    def worker(input):
+        ref_path, m_start, m_end = input
         best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
                   debug=debug, datepaser=datepaser)
         if copydir is not '':
@@ -496,7 +497,12 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     # todo: add filter by m_start and m_end
     prlist = pd.read_csv(prlistfile, names=PRnames, dtype={'PR': str})
     if 'm_start' in prlist.columns and 'm_end' in prlist.columns:
-        monthfilter = True
+        m_start_list = list(prlist.m_start)
+        m_end_list = list(prlist.m_end)
+    else:
+        m_start_list = [None] * len(prlist)
+        m_end_list = [None] * len(prlist)
+
     ref_path_list = []
     for pr in prlist.PR:
         print(path.join(ref_root, pr+'*'))
@@ -505,7 +511,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
             continue
         ref_path_list.append(ref_candi_list[0])
     p = Pool(nprocess)
-    p.map(worker, ref_path_list)
+    bestlist = p.map(worker, zip(ref_path_list, m_start_list, m_end_list))
     # for ref_path in ref_path_list:
     #     best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
     #               debug=debug, datepaser=datepaser)

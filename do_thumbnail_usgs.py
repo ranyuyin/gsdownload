@@ -24,8 +24,9 @@ if __name__=='__main__':
     #
     # for i, one_pr_list in enumerate(pr_lists):
     #     # condi_df_list.append([])
-    startdate = '2016-03-01'
-    enddate = '2019-06-01'
+
+    startdate = '1975-01-01'
+    enddate = '1977-12-31'
     thumb_root = r'Z:\yinry\china.mosaic\basemap0620\thumbnail'
     #     this_condi = down_util.condi_thumbnail_by_pr(df, one_pr_list, startdate, enddate, 20, mode='PR')
     #     # this_down_root = path.join(down_root, str(year))
