@@ -508,13 +508,14 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
         m_start_list = [None] * len(prlist)
         m_end_list = [None] * len(prlist)
 
-    ref_path_list = []
-    for pr in prlist.PR:
-        print(path.join(ref_root, pr+'*'))
-        ref_candi_list = glob(path.join(ref_root, pr + '*'))
-        if len(ref_candi_list) == 0:
-            continue
-        ref_path_list.append(ref_candi_list[0])
+    ref_path_list = [path.join(ref_root, pr.zfill(6) + '.tif') for pr in prlist.PR]
+    # old style:
+    # for pr in prlist.PR:
+    #     print(path.join(ref_root, pr+'*'))
+    #     ref_candi_list = glob(path.join(ref_root, pr + '*'))
+    #     if len(ref_candi_list) == 0:
+    #         continue
+    #     ref_path_list.append(ref_candi_list[0])
     p = Pool(nprocess)
     bestlist = p.map(worker, zip(ref_path_list, m_start_list, m_end_list))
     # for ref_path in ref_path_list:
