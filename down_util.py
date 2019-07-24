@@ -394,7 +394,7 @@ def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff
                        (df.WRS_ROW == wrs_row) &
                        (df.DATE_ACQUIRED > date_start) &
                        (df.DATE_ACQUIRED < date_end) &
-                       (df.CLOUD_COVER < 20)]
+                       (df.CLOUD_COVER < 30)]
     return thiscandi
 
 
@@ -474,7 +474,7 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
                    df=None, Global_monthlist=None, nprocess=4, PRnames=None):
-    from multiprocessing import Pool
+    from pathos.multiprocessing import Pool
     from functools import partial
 
     if copydir is not '' and path.exists(copydir) is False:
@@ -484,22 +484,24 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 
     def worker(input):
         ref_path, m_start, m_end = input
-        if m_end < m_start:
-            m_end += 12
-        monthlist = [i % 12 if (i % 12) != 0 else 12 for i in list(range(m_start, m_end+1))]
-        best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
-                  debug=debug, datepaser=datepaser, monthlist=monthlist)
-        if copydir is not '':
-            if best is not None:
-                shutil.copy(best, copydir)
-        return best
+        if not path.exists(ref_path):
+            pass
+        else:
+            if m_end < m_start:
+                m_end += 12
+            monthlist = [i % 12 if (i % 12) != 0 else 12 for i in list(range(m_start, m_end+1))]
+            best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
+                      debug=debug, datepaser=datepaser, monthlist=monthlist)
+            if copydir is not '':
+                if best is not None:
+                    shutil.copy(best, copydir)
+            return best
 
     if df is None:
         df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
     if Global_monthlist is not None and type(Global_monthlist) is list:
         df = filtermonth(df, Global_monthlist)
     bestlist = []
-    # todo: add filter by m_start and m_end
     prlist = pd.read_csv(prlistfile, names=PRnames, dtype={'PR': str})
     if 'm_start' in prlist.columns and 'm_end' in prlist.columns:
         m_start_list = list(prlist.m_start)
@@ -517,7 +519,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     #         continue
     #     ref_path_list.append(ref_candi_list[0])
     p = Pool(nprocess)
-    bestlist = p.map(worker, zip(ref_path_list, m_start_list, m_end_list))
+    bestlist = p.map(worker, list(zip(ref_path_list, m_start_list, m_end_list)))
     # for ref_path in ref_path_list:
     #     best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
     #               debug=debug, datepaser=datepaser)
