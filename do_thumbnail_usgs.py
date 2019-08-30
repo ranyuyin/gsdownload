@@ -17,21 +17,23 @@ if __name__=='__main__':
     # down_util.download_c1df_thumbnail(condi_df,
     #                                   r'D:\PROJECT\A_Project\global_download\2000\cloud2000.thumbnail')
 
-    pr_lists = [r"Z:\yinry\china.mosaic\china.pr.txt"]
+    pr_lists = [r"Z:\yinry\0.DEFINITION\wrs2landwithmonth.csv"]
+    # pr_lists = [r"Z:\yinry\china.mosaic\china.pr.txt"]
     # down_root = r'Z:\yinry\china.mosaic\1990\thumbnail'
     ref_root = r'Z:\yinry\global_mosaic\global_thumbnail_ref\global_thumbnail_0203'
     # condi_df_list = []
     #
     # for i, one_pr_list in enumerate(pr_lists):
     #     # condi_df_list.append([])
-    startdate = '2016-03-01'
-    enddate = '2019-06-01'
-    thumb_root = r'Z:\yinry\china.mosaic\basemap0620\thumbnail'
+
+    startdate = '2013-01-01'
+    enddate = '2014-12-31'
+    thumb_root = r'Z:\yinry\global_mosaic\2013\0.thumbnail'
     #     this_condi = down_util.condi_thumbnail_by_pr(df, one_pr_list, startdate, enddate, 20, mode='PR')
     #     # this_down_root = path.join(down_root, str(year))
     #     down_util.download_c1df_thumbnail(this_condi, down_root)
     good = down_util.BestsceneWoker(ref_root, pr_lists[0], startdate, enddate, thumb_root,
-                                    copydir=r'Z:\yinry\china.mosaic\basemap0620\good', df=df,
-                                    monthlist=[5, 6, 7, 8, 9], nprocess=36)
-    pd.DataFrame(data={'good': good}).to_csv(r'Z:\yinry\china.mosaic\basemap0620\thumbnail\good.csv', index=False, header=False)
+                                    copydir=r'Z:\yinry\global_mosaic\2013\1.good', df=df,
+                                     nprocess=36)
+    pd.DataFrame(data={'good': good}).to_csv(r'Z:\yinry\global_mosaic\2013\0.thumbnail\good.csv', index=False, header=False)
     exit(0)

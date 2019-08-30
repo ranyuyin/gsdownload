@@ -123,9 +123,6 @@ def write_subs(df,dstdir,filename,columns=['BASE_URL']):
 
 def preprocess(df, year=None, SLC_off=False):
     df = df.loc[df.COLLECTION_NUMBER == '01']
-    if year is not None:
-        if year<2003:
-            L7 = True
     if SLC_off==False:
         # sub = df.loc[df.SPACECRAFT_ID != 'LANDSAT_7']
         sub = df.loc[(df.SPACECRAFT_ID!='LANDSAT_7')|(df.DATE_ACQUIRED<datetime(year=2003,month=5,day=31))]
@@ -198,7 +195,8 @@ def datepr_from_pid(pid):
 
 def datepr_from_sid(sid):
     parten = '...(...)(...)(....)(...).*'
-    _, wrs_path, wrs_row, year, DOY = re.split(parten, sid)
+    # print(re.split(parten, sid))
+    _, wrs_path, wrs_row, year, DOY, _ = re.split(parten, sid)
     date = datetime(int(year), 1, 1) + timedelta(int(DOY) - 1)
     return date.strftime('%Y%m%d') + wrs_path + wrs_row
 
@@ -386,15 +384,17 @@ def pidlist2datepr(pidlist):
     return datepr
 
 
-def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True):
+def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True, monthlist=None):
     pd_condi = pd.DataFrame()
+    if monthlist is not None:
+        df = filtermonth(df, monthlist)
     if ignoreSLCoff:
         df = df.loc[(df.SPACECRAFT_ID != 'LANDSAT_7') | (df.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
     thiscandi = df.loc[(df.WRS_PATH == wrs_path) &
                        (df.WRS_ROW == wrs_row) &
                        (df.DATE_ACQUIRED > date_start) &
                        (df.DATE_ACQUIRED < date_end) &
-                       (df.CLOUD_COVER < 20)]
+                       (df.CLOUD_COVER < 30)]
     return thiscandi
 
 
@@ -419,7 +419,8 @@ def hist_score(imgQ, imgD, bins=51, inrange=(0, 255)):
     return scores.mean()
 
 
-def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir=''):
+def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False,
+              datepaser='%Y-%m-%d', copydir='', monthlist=None):
 
     date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     # Get candidate PID list for df
@@ -432,7 +433,8 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
                                                                  datetime.strftime(date_end, '%Y%m%d'))
     cach_candi_path = path.join(thumb_root, cach_candi)
     if not path.exists(cach_candi_path):
-        candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=ignoreSLCoff)
+        candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df,
+                                      ignoreSLCoff=ignoreSLCoff, monthlist=monthlist)
         candi_df.to_csv(cach_candi_path)
     else:
         candi_df = pd.read_csv(cach_candi_path)
@@ -471,8 +473,8 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
 
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
-                   df=None, monthlist=None, nprocess=4, PRnames=None):
-    from multiprocessing import Pool
+                   df=None, Global_monthlist=None, nprocess=4, PRnames=None):
+    from pathos.multiprocessing import Pool
     from functools import partial
 
     if copydir is not '' and path.exists(copydir) is False:
@@ -480,32 +482,44 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     if path.exists(thumb_root) is False:
         os.makedirs(thumb_root)
 
-    def worker(ref_path):
-        best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
-                  debug=debug, datepaser=datepaser)
-        if copydir is not '':
-            if best is not None:
-                shutil.copy(best, copydir)
-        return best
+    def worker(input):
+        ref_path, m_start, m_end = input
+        if not path.exists(ref_path):
+            pass
+        else:
+            if m_end < m_start:
+                m_end += 12
+            monthlist = [i % 12 if (i % 12) != 0 else 12 for i in list(range(m_start, m_end+1))]
+            best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
+                      debug=debug, datepaser=datepaser, monthlist=monthlist)
+            if copydir is not '':
+                if best is not None:
+                    shutil.copy(best, copydir)
+            return best
 
     if df is None:
         df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
-    if monthlist is not None and type(monthlist) is list:
-        df = filtermonth(df, monthlist)
+    if Global_monthlist is not None and type(Global_monthlist) is list:
+        df = filtermonth(df, Global_monthlist)
     bestlist = []
-    # todo: add filter by m_start and m_end
     prlist = pd.read_csv(prlistfile, names=PRnames, dtype={'PR': str})
     if 'm_start' in prlist.columns and 'm_end' in prlist.columns:
-        monthfilter = True
-    ref_path_list = []
-    for pr in prlist.PR:
-        print(path.join(ref_root, pr+'*'))
-        ref_candi_list = glob(path.join(ref_root, pr + '*'))
-        if len(ref_candi_list) == 0:
-            continue
-        ref_path_list.append(ref_candi_list[0])
+        m_start_list = list(prlist.m_start)
+        m_end_list = list(prlist.m_end)
+    else:
+        m_start_list = [None] * len(prlist)
+        m_end_list = [None] * len(prlist)
+
+    ref_path_list = [path.join(ref_root, pr.zfill(6) + '.tif') for pr in prlist.PR]
+    # old style:
+    # for pr in prlist.PR:
+    #     print(path.join(ref_root, pr+'*'))
+    #     ref_candi_list = glob(path.join(ref_root, pr + '*'))
+    #     if len(ref_candi_list) == 0:
+    #         continue
+    #     ref_path_list.append(ref_candi_list[0])
     p = Pool(nprocess)
-    p.map(worker, ref_path_list)
+    bestlist = p.map(worker, list(zip(ref_path_list, m_start_list, m_end_list)))
     # for ref_path in ref_path_list:
     #     best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
     #               debug=debug, datepaser=datepaser)
