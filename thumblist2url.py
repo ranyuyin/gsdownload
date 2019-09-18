@@ -19,4 +19,4 @@ if __name__ == '__main__':
     else:
         odir, oname = path.split(args.thmdir)
         ourlpath = path.join(odir, oname + '_url.txt')
-    df.to_csv(ourlpath, index=False, header=False)
+    df.BASE_URL.to_csv(ourlpath, index=False, header=False)
