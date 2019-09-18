@@ -12,6 +12,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     jpglist = glob(path.join(args.thmdir, '*.jpg'))
     df, _ = down_util.split_collection(args.gstable)
+    jpglist = [path.basename(i) for i in jpglist]
     df = down_util.Get_zone(df, todoPID=jpglist)
     if args.ourllist is not '':
         ourlpath = args.ourllist
