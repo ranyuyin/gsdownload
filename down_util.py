@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 from joblib import Parallel, delayed
 import shutil
+from skimage import io
 import importlib # 可用于reload库
 # import importlib # 可用于reload库
 
@@ -297,7 +298,7 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
         errorlist.append(pid)
 
 
-def download_c1df_thumbnail(df, download_root):
+def download_c1df_thumbnail(df, download_root, par=False):
     # df = addyearmonth(df)
     i = 0
     errorlist = []
@@ -315,9 +316,11 @@ def download_c1df_thumbnail(df, download_root):
         # print('downloading: ', pid)
         get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist)
         # print('done!')
-
-    Parallel(n_jobs=8, require='sharedmem')(delayed(download_row)(row, errorlist, downlist) for row in tqdm(df.itertuples()))
-
+    if par:
+        Parallel(n_jobs=8, require='sharedmem')(delayed(download_row)(row, errorlist, downlist) for row in tqdm(df.itertuples()))
+    else:
+        for row in tqdm(df.itertuples()):
+            download_row(row, errorlist, downlist)
     pd.DataFrame(data={'error_pid': errorlist}).to_csv(path.join(download_root, 'errorlist.csv'), index=False)
     if downlist is not None:
         return downlist
@@ -424,8 +427,8 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
 
     date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     # Get candidate PID list for df
-    from skimage import io
     pr = path.splitext(path.basename(ref_path))[0]
+    print('processing {}'.format(pr))
     wrs_path, wrs_row = int(pr[:3]), int(pr[3:])
     cach_candi = '{}_{}_{}_{}.csv'.format(str(wrs_path).zfill(3),
                                                                  str(wrs_row).zfill(3),
@@ -484,8 +487,10 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 
     def worker(input):
         ref_path, m_start, m_end = input
+        if m_start is None or m_end is None:
+            m_start, m_end = 1, 12
         if not path.exists(ref_path):
-            pass
+            return None
         else:
             if m_end < m_start:
                 m_end += 12
@@ -518,6 +523,8 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     #     if len(ref_candi_list) == 0:
     #         continue
     #     ref_path_list.append(ref_candi_list[0])
+    print('list done!')
+    print('start!')
     p = Pool(nprocess)
     bestlist = p.map(worker, list(zip(ref_path_list, m_start_list, m_end_list)))
     # for ref_path in ref_path_list:
