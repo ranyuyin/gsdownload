@@ -269,7 +269,7 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
                'LANDSAT_5': 'landsat_tm_c1',
                'LANDSAT_7': 'landsat_etm_c1',
                'LANDSAT_8': 'landsat_8_c1'}
-    baseurl = 'https://earthexplorer.usgs.gov/browse/'
+    baseurl = 'https://ims.cr.usgs.gov/browse/'
     if year is not None:
         thumbnail_url = baseurl + '/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid + '.jpg'])
     else:
@@ -317,7 +317,7 @@ def download_c1df_thumbnail(df, download_root, par=False):
         get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist)
         # print('done!')
     if par:
-        Parallel(n_jobs=8, require='sharedmem')(delayed(download_row)(row, errorlist, downlist) for row in tqdm(df.itertuples()))
+        Parallel(n_jobs=2, require='sharedmem')(delayed(download_row)(row, errorlist, downlist) for row in tqdm(df.itertuples()))
     else:
         for row in tqdm(df.itertuples()):
             download_row(row, errorlist, downlist)
@@ -525,7 +525,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     if copydir is not '':
         finish_list = glob(path.join(copydir, '*.jpg'))
         jpglist = [path.basename(i) for i in finish_list]
-        finishpr = pr_from_pid(jpglist)
+        finishpr = [pr_from_pid(i) for i in jpglist]
         prlist = prlist.loc[~prlist.PR.isin(finishpr)]
     ref_path_list = [path.join(ref_root, pr.zfill(6) + '.tif') for pr in prlist.PR]
     print('list done!')
