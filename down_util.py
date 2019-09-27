@@ -477,7 +477,7 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
                    df=None, Global_monthlist=None, nprocess=4, PRnames=None):
-    from pathos.multiprocessing import Pool
+    from pathos.multiprocessing import ProcessPool
     from functools import partial
     if copydir is not '' and path.exists(copydir) is False:
         os.makedirs(copydir)
@@ -530,7 +530,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     ref_path_list = [path.join(ref_root, pr.zfill(6) + '.tif') for pr in prlist.PR]
     print('list done!')
     print('start!')
-    p = Pool(nprocess)
+    p = ProcessPool(nodes=nprocess)
     bestlist = p.map(worker, list(zip(ref_path_list, m_start_list, m_end_list)))
     # for ref_path in ref_path_list:
     #     best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
