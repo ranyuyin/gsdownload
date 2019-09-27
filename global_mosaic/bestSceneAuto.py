@@ -16,7 +16,7 @@ if __name__ == '__main__':
                         required=False, default=r'Z:\yinry\global_mosaic\global_thumbnail_ref\global_thumbnail_0203')
     parser.add_argument('-i', help='index file', dest='gstable',
                         required=False, default=r'Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz')
-    parser.add_argument('-m', help='multi process', dest='nMulti', required=False, default=5, type=int)
+    parser.add_argument('-m', help='multi process', dest='nMulti', required=False, default=15, type=int)
     args = parser.parse_args()
     df, _ = down_util.split_collection(args.gstable)
     thumb_root = path.join(args.work_dir, '0.thumbnail')

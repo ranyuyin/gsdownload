@@ -17,8 +17,8 @@ if __name__=='__main__':
     # down_util.download_c1df_thumbnail(condi_df,
     #                                   r'D:\PROJECT\A_Project\global_download\2000\cloud2000.thumbnail')
 
-    # pr_lists = [r"Z:\yinry\0.DEFINITION\wrs2landwithmonth.csv"]
-    pr_lists = [r"Z:\yinry\china.mosaic\china.pr.txt"]
+    pr_lists = [r"Z:\yinry\0.DEFINITION\wrs2landwithmonth.csv"]
+    # pr_lists = [r"Z:\yinry\china.mosaic\china.pr.txt"]
     # down_root = r'Z:\yinry\china.mosaic\1990\thumbnail'
     ref_root = r'Z:\yinry\global_mosaic\global_thumbnail_ref\global_thumbnail_0203'
     # condi_df_list = []
@@ -26,9 +26,9 @@ if __name__=='__main__':
     # for i, one_pr_list in enumerate(pr_lists):
     #     # condi_df_list.append([])
 
-    startdate = '1986-01-01'
-    enddate = '1986-12-31'
-    yearroot = r'Z:\yinry\china.mosaic\1986'
+    startdate = '2003-01-01'
+    enddate = '2007-12-31'
+    yearroot = r'Z:\yinry\global_mosaic\2005'
     # thumb_root = r'Z:\yinry\global_mosaic\2005\0.thumbnail'
     thumb_root = path.join(yearroot, '0.thumbnail')
     #     this_condi = down_util.condi_thumbnail_by_pr(df, one_pr_list, startdate, enddate, 20, mode='PR')

@@ -486,6 +486,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 
     def worker(input):
         ref_path, m_start, m_end = input
+        print(ref_path)
         if m_start is None or m_end is None:
             m_start, m_end = 1, 12
         if not path.exists(ref_path):
@@ -531,6 +532,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     print('list done!')
     print('start!')
     p = Pool(nprocess)
+    print('started {}'.format(nprocess))
     bestlist = p.map(worker, list(zip(ref_path_list, m_start_list, m_end_list)))
     # for ref_path in ref_path_list:
     #     best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
