@@ -477,45 +477,19 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
                    df=None, Global_monthlist=None, nprocess=4, PRnames=None):
-    from pathos.multiprocessing import ProcessPool
+    # from pathos.multiprocessing import ProcessPool
     from functools import partial
+    from multiprocessing import Pool
     if copydir is not '' and path.exists(copydir) is False:
         os.makedirs(copydir)
     if path.exists(thumb_root) is False:
         os.makedirs(thumb_root)
-
-    def worker(input):
-        ref_path, m_start, m_end = input
-        print(ref_path)
-        if m_start is None or m_end is None:
-            m_start, m_end = 1, 12
-        if not path.exists(ref_path):
-            return None
-        else:
-            if m_end < m_start:
-                m_end += 12
-            monthlist = [i % 12 if (i % 12) != 0 else 12 for i in list(range(m_start, m_end+1))]
-            best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
-                      debug=debug, datepaser=datepaser, monthlist=monthlist)
-            if copydir is not '':
-                if best is not None:
-                    shutil.copy(best, copydir)
-            return best
-
     if df is None:
         df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
     if Global_monthlist is not None and type(Global_monthlist) is list:
         df = filtermonth(df, Global_monthlist)
     bestlist = []
     prlist = pd.read_csv(prlistfile, names=PRnames, dtype={'PR': str})
-    if 'm_start' in prlist.columns and 'm_end' in prlist.columns:
-        m_start_list = list(prlist.m_start)
-        m_end_list = list(prlist.m_end)
-    else:
-        m_start_list = [None] * len(prlist)
-        m_end_list = [None] * len(prlist)
-
-
     # old style:
     # for pr in prlist.PR:
     #     print(path.join(ref_root, pr+'*'))
@@ -527,12 +501,21 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
         finish_list = glob(path.join(copydir, '*.jpg'))
         jpglist = [path.basename(i) for i in finish_list]
         finishpr = [pr_from_pid(i) for i in jpglist]
+        print(len(prlist))
         prlist = prlist.loc[~prlist.PR.isin(finishpr)]
+        print(len(prlist))
+    if 'start_mon' in prlist.columns and 'end_mon' in prlist.columns:
+        m_start_list = list(prlist.start_mon)
+        m_end_list = list(prlist.end_mon)
+    else:
+        m_start_list = [None] * len(prlist)
+        m_end_list = [None] * len(prlist)
     ref_path_list = [path.join(ref_root, pr.zfill(6) + '.tif') for pr in prlist.PR]
     print('list done!')
     print('start!')
-    p = ProcessPool(nodes=nprocess)
-    bestlist = p.map(worker, list(zip(ref_path_list, m_start_list, m_end_list)))
+    p = Pool(nprocess)
+    bestlist = p.map(partial(one_best_worker, date_start=date_start, date_end=date_end, df=df, thumb_root=thumb_root, copydir=copydir,
+                    ignoreSLCoff=ignoreSLCoff, debug=debug, datepaser=datepaser), list(zip(ref_path_list, m_start_list, m_end_list)))
     # for ref_path in ref_path_list:
     #     best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
     #               debug=debug, datepaser=datepaser)
@@ -541,6 +524,26 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     #         if best is not None:
     #             shutil.copy(best, copydir)
     return bestlist
+
+
+def one_best_worker(args, date_start, date_end, df, thumb_root, copydir='',
+                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d'):
+    ref_path, m_start, m_end = args
+    print(ref_path)
+    if m_start is None or m_end is None:
+        m_start, m_end = 1, 12
+    if not path.exists(ref_path):
+        return None
+    else:
+        if m_end < m_start:
+            m_end += 12
+        monthlist = [i % 12 if (i % 12) != 0 else 12 for i in list(range(m_start, m_end+1))]
+        best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
+                  debug=debug, datepaser=datepaser, monthlist=monthlist)
+        if copydir is not '':
+            if best is not None:
+                shutil.copy(best, copydir)
+        return best
 
 
 def filtermonth(df, monthlist):
