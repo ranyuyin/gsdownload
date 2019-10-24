@@ -291,9 +291,11 @@ def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, err
         #     download_folder, "{0:.2f}".format(CLOUD_COVER)+'_'+pid+'.jpg')
         if not path.exists(down_file):
             # print(thumbnail_url, down_file)
+            # print('download {}'.format(thumbnail_url))
             wget.download(thumbnail_url, down_file)
         else:
-            print('skip!')
+            pass
+            # print('skip!')
     except:
         errorlist.append(pid)
 
@@ -442,6 +444,7 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
     else:
         candi_df = pd.read_csv(cach_candi_path)
     candi_jpg_list = download_c1df_thumbnail(candi_df, thumb_root)
+    print('{} has {} candi'.format(pr, len(candi_jpg_list)))
     if len(candi_jpg_list) == 0:
         return None
     imgQ = io.imread(ref_path)
@@ -464,8 +467,10 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
         CCS.append(list(candi_df.loc[candi_df.PRODUCT_ID == pid].CLOUD_COVER)[0])
     scores = np.array(scores)
     CCS = np.array(CCS)
-    CCS[scores < 0.5] = 100
+    # CCS[scores < 0.5] = 100
+    # CCS[scores < 0.2] = 100
     if CCS.min() == 100:
+        print('{} failed!'.format(pr))
         return None
     best = candi_jpg_list[CCS.argmin()]
     if copydir is not '':
@@ -501,9 +506,9 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
         finish_list = glob(path.join(copydir, '*.jpg'))
         jpglist = [path.basename(i) for i in finish_list]
         finishpr = [pr_from_pid(i) for i in jpglist]
-        print(len(prlist))
+        # print(len(prlist))
         prlist = prlist.loc[~prlist.PR.isin(finishpr)]
-        print(len(prlist))
+        # print(len(prlist))
     if 'start_mon' in prlist.columns and 'end_mon' in prlist.columns:
         m_start_list = list(prlist.start_mon)
         m_end_list = list(prlist.end_mon)
@@ -529,7 +534,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 def one_best_worker(args, date_start, date_end, df, thumb_root, copydir='',
                     ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d'):
     ref_path, m_start, m_end = args
-    print(ref_path)
+    # print(ref_path)
     if m_start is None or m_end is None:
         m_start, m_end = 1, 12
     if not path.exists(ref_path):
