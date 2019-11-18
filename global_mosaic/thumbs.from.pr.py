@@ -1,7 +1,7 @@
 import down_util
 import argparse
 import pandas as pd
-from os import path
+from os import path, mkdir
 from functools import partial
 from datetime import datetime
 from tqdm import tqdm
@@ -41,6 +41,8 @@ if __name__ == '__main__':
     df, _ = down_util.split_collection(args.gstable)
     prlist = pd.read_csv(args.prs, dtype={'PR': str})
     thumb_root = path.join(args.work_dir, '0.thumbnail')
+    if not path.exists(thumb_root):
+        mkdir(thumb_root)
     p = Pool(args.nMulti)
     for i in tqdm(p.imap(partial(doOne, date_start=date_start,
                                  date_end=date_end, df=df, thumb_root=thumb_root),
