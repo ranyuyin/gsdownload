@@ -369,7 +369,7 @@ def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi,
                            (df.DATE_ACQUIRED<date_end)]
         if monthfilter:
             thiscondi = thiscondi.loc[
-                (thiscondi.month - date_start) * (date_end - thiscondi.month) * (date_end - date_start)>0
+                (thiscondi.month - date_start) * (date_end - thiscondi.month) * (date_end - date_start) > 0
             ]
         thiscondi = thiscondi.sort_values('CLOUD_COVER').head(n_condi)
         pd_condi = pd_condi.append(thiscondi)
@@ -389,7 +389,7 @@ def pidlist2datepr(pidlist):
     return datepr
 
 
-def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True, monthlist=None):
+def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff=True, monthlist=None, n_condi=25):
     pd_condi = pd.DataFrame()
     if monthlist is not None:
         df = filtermonth(df, monthlist)
@@ -398,8 +398,8 @@ def Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df, ignoreSLCoff
     thiscandi = df.loc[(df.WRS_PATH == wrs_path) &
                        (df.WRS_ROW == wrs_row) &
                        (df.DATE_ACQUIRED > date_start) &
-                       (df.DATE_ACQUIRED < date_end) &
-                       (df.CLOUD_COVER < 30)]
+                       (df.DATE_ACQUIRED < date_end)]
+    thiscandi = thiscandi.sort_values('CLOUD_COVER').head(n_condi)
     return thiscandi
 
 
@@ -426,7 +426,6 @@ def hist_score(imgQ, imgD, bins=51, inrange=(0, 255)):
 
 def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False,
               datepaser='%Y-%m-%d', copydir='', monthlist=None):
-
     date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
     # Get candidate PID list for df
     pr = path.splitext(path.basename(ref_path))[0]
