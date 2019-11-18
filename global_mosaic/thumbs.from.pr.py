@@ -44,7 +44,7 @@ if __name__ == '__main__':
     p = Pool(args.nMulti)
     for i in tqdm(p.imap(partial(doOne, date_start=date_start,
                                  date_end=date_end, df=df, thumb_root=thumb_root),
-                         prlist), total=len(prlist)):
+                         prlist.PR), total=len(prlist)):
         pass
 
 
