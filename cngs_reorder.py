@@ -9,8 +9,10 @@ def parse_dst(filename):
 if __name__=='__main__':
     dirname=argv[1]
     while(True):
-        filelist=glob(path.join(dirname,'*.TIF'))
+        filelist=glob(path.join(dirname, '**'), recursive=True)
         for file in filelist:
+            if path.isdir(file):
+                continue
             dst=parse_dst(file)
             # print(file+'\n')
             # print(dst+'\n')

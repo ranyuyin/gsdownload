@@ -21,7 +21,7 @@ if __name__ == '__main__':
     df, _ = down_util.split_collection(args.gstable)
     thumb_root = path.join(args.work_dir, '0.thumbnail')
     good = down_util.BestsceneWoker(args.ref_root, args.prs, args.start_date, args.end_date, thumb_root,
-                                    copydir=path.join(args.work_dir, '1.good'), df=df,
+                                    copydir=path.join(args.work_dir, '1.good'), df=df, Global_monthlist=[4,5,6,7,8,9,10],
                                     nprocess=args.nMulti)
     pd.DataFrame(data={'good': good}).to_csv(path.join(thumb_root, 'good.csv'), index=False, header=False)
     exit(0)
