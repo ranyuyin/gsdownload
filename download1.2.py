@@ -6,7 +6,7 @@ from os import path
 
 wildchar_dict = {'mapl8': ['L*B[4-6].TIF', 'L*BQA.TIF', 'L*MTL.txt'],
                  'mapl57': ['L*B[3-5].TIF', 'L*BQA.TIF', 'L*MTL.txt'],
-                 'raw': ['*']}
+                 'raw': ['']}
 
 def parse_url(url, craft='LANDSAT'):
     if craft == 'LANDSAT':
