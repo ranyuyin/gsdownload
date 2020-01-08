@@ -501,6 +501,8 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     #     if len(ref_candi_list) == 0:
     #         continue
     #     ref_path_list.append(ref_candi_list[0])
+
+    # Skip Exist
     if copydir is not '':
         finish_list = glob(path.join(copydir, '*.jpg'))
         jpglist = [path.basename(i) for i in finish_list]
@@ -508,6 +510,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
         # print(len(prlist))
         prlist = prlist.loc[~prlist.PR.isin(finishpr)]
         # print(len(prlist))
+
     if 'start_mon' in prlist.columns and 'end_mon' in prlist.columns:
         m_start_list = list(prlist.start_mon)
         m_end_list = list(prlist.end_mon)
