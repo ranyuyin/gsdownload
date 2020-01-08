@@ -4,8 +4,8 @@ import os, sys
 from glob import glob
 from os import path
 
-wildchar_dict = {'mapl8': ['L*B[4-6].TIF', 'L*BQA.TIF', 'L*MTL.txt'],
-                 'mapl57': ['L*B[3-5].TIF', 'L*BQA.TIF', 'L*MTL.txt'],
+wildchar_dict = {'mapl8': ['/L*B[4-6].TIF', '/L*BQA.TIF', '/L*MTL.txt'],
+                 'mapl57': ['/L*B[3-5].TIF', '/L*BQA.TIF', '/L*MTL.txt'],
                  'raw': ['']}
 
 def parse_url(url, craft='LANDSAT'):
@@ -39,7 +39,7 @@ def downloadone(file, downloaddir=None, craft='LANDSAT', mode=''):
         if not path.exists(scenedir):
             os.makedirs(scenedir)
         for wildchar in wildchar_dict[mode]:
-            while (os.system('gsutil -m cp -r -n {0} {1}'.format(url.strip('\n') + '/'+wildchar, scenedir)) != 0):
+            while (os.system('gsutil -m cp -r -n {0} {1}'.format(url.strip('\n') + wildchar, scenedir)) != 0):
                 pass
         open(file, 'w').writelines(urls)
 
