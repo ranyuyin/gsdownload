@@ -366,7 +366,7 @@ def condi_thumbnail_by_pr(df, listlike, date_start, date_end, n_condi,
         thiscondi = df.loc[(df.WRS_PATH==wrs_path)&
                            (df.WRS_ROW==wrs_row)&
                            (df.DATE_ACQUIRED>date_start)&
-                           (df.DATE_ACQUIRED<date_end)]
+                           (df.DATE_ACQUIRED<date_end)&(df.COLLECTION_CATEGORY!='RT')]
         if monthfilter:
             thiscondi = thiscondi.loc[
                 (thiscondi.month - date_start) * (date_end - thiscondi.month) * (date_end - date_start) > 0
