@@ -261,6 +261,37 @@ def seasonal_count(df, sta_table, date_split=('1-1','4-1','7-1','10-1'), todopr=
     sta_out.to_csv(staname)
 
 
+def get_thumbnail_pid_Direct(pid, download_root):
+    dirmaps = {'LANDSAT_1': 'landsat_mss_c1',
+               'LANDSAT_2': 'landsat_mss_c1',
+               'LANDSAT_3': 'landsat_mss_c1',
+               'LANDSAT_4': 'landsat_mss_c1',
+               'LANDSAT_5': 'landsat_tm_c1',
+               'LANDSAT_7': 'landsat_etm_c1',
+               'LANDSAT_8': 'landsat_8_c1'}
+    baseurl = 'https://ims.cr.usgs.gov/browse/'
+    year = pid.split('_')[3][:4]
+    wrs_path = pid.split('_')[2][:3]
+    wrs_row = pid.split('_')[2][3:6]
+    craft_id = 'LANDSAT_' + pid.split('_')[0][-1]
+    thumbnail_url = baseurl + '/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid + '.jpg'])
+    download_folder = path.join(download_root, wrs_path, wrs_row)
+    while not path.exists(download_folder):
+        try:
+            os.makedirs(download_folder)
+        except:
+            pass
+    # n_try = 5
+    try:
+        down_file = path.join(download_folder, pid+'.jpg')
+        if not path.exists(down_file):
+            wget.download(thumbnail_url, down_file)
+        else:
+            pass
+    except:
+        return
+
+
 def get_thumbnail_pid(pid, year, wrs_path, wrs_row, craft_id, download_root, errorlist, downlist=None):
     dirmaps = {'LANDSAT_1': 'landsat_mss_c1',
                'LANDSAT_2': 'landsat_mss_c1',
