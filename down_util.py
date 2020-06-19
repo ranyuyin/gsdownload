@@ -508,6 +508,59 @@ def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None
             shutil.copy(best, copydir)
     return best
 
+def Getprbest(ref_path, date_start=None, date_end=None, df=None, thumb_root=None, ignoreSLCoff=True, debug=False,
+              datepaser='%Y-%m-%d', copydir='', monthlist=None):
+    date_start, date_end = datetime.strptime(date_start, datepaser), datetime.strptime(date_end, datepaser)
+    # Get candidate PID list for df
+    pr = path.splitext(path.basename(ref_path))[0]
+    print('processing {}'.format(pr))
+    wrs_path, wrs_row = int(pr[:3]), int(pr[3:])
+    cach_candi = '{}_{}_{}_{}.csv'.format(str(wrs_path).zfill(3),
+                                                                 str(wrs_row).zfill(3),
+                                                                 datetime.strftime(date_start, '%Y%m%d'),
+                                                                 datetime.strftime(date_end, '%Y%m%d'))
+    cach_candi_path = path.join(thumb_root, cach_candi)
+    if not path.exists(cach_candi_path):
+        candi_df = Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df,
+                                      ignoreSLCoff=ignoreSLCoff, monthlist=monthlist)
+        candi_df.to_csv(cach_candi_path)
+    else:
+        candi_df = pd.read_csv(cach_candi_path)
+    candi_jpg_list = download_c1df_thumbnail(candi_df, thumb_root)
+    print('{} has {} candi'.format(pr, len(candi_jpg_list)))
+    if len(candi_jpg_list) == 0:
+        return None
+    imgQ = io.imread(ref_path)
+    scores = []
+    CCS = []
+    # print(candi_jpg_list)
+    for id, candi_img in enumerate(candi_jpg_list):
+        if not path.exists(candi_img):
+            scores.append(0)
+            CCS.append(100)
+            continue
+        imgD = io.imread(candi_img)
+        this_score = hist_score(imgQ, imgD)
+        if debug:
+            newname = add_prefix(candi_img, "{0:.2f}".format(this_score))
+            os.renames(candi_img, newname)
+            candi_jpg_list[id] = newname
+        scores.append(this_score)
+        pid = path.splitext(path.basename(candi_img))[0]
+        CCS.append(list(candi_df.loc[candi_df.PRODUCT_ID == pid].CLOUD_COVER)[0])
+    scores = np.array(scores)
+    CCS = np.array(CCS)
+    # CCS[scores < 0.5] = 100
+    # CCS[scores < 0.2] = 100
+    if CCS.min() == 100:
+        print('{} failed!'.format(pr))
+        return None
+    best = candi_jpg_list[CCS.argmin()]
+    if copydir is not '':
+        if best is not None:
+            shutil.copy(best, copydir)
+    return best
+
 
 def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
                    ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
@@ -550,6 +603,61 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
         m_end_list = [None] * len(prlist)
     ref_path_list = [path.join(ref_root, pr.zfill(6) + '.tif') for pr in prlist.PR]
     print('list done!')
+    print('start!')
+    p = Pool(nprocess)
+    bestlist = p.map(partial(one_best_worker, date_start=date_start, date_end=date_end, df=df, thumb_root=thumb_root, copydir=copydir,
+                    ignoreSLCoff=ignoreSLCoff, debug=debug, datepaser=datepaser), list(zip(ref_path_list, m_start_list, m_end_list)))
+    # for ref_path in ref_path_list:
+    #     best = Getprbest(ref_path, date_start, date_end, df, thumb_root, ignoreSLCoff=ignoreSLCoff,
+    #               debug=debug, datepaser=datepaser)
+    #     bestlist.append(best)
+    #     if copydir is not '':
+    #         if best is not None:
+    #             shutil.copy(best, copydir)
+    return bestlist
+
+
+def BestsceneWokerDL(modelPath, prlistfile, date_start, date_end, thumb_root,
+                   ignoreSLCoff=True, debug=False, datepaser='%Y-%m-%d', copydir='',
+                   df=None, Global_monthlist=None, nprocess=4, PRnames=None):
+    # from pathos.multiprocessing import ProcessPool
+    from functools import partial
+    from multiprocessing import Pool
+    if copydir is not '' and path.exists(copydir) is False:
+        os.makedirs(copydir)
+    if path.exists(thumb_root) is False:
+        os.makedirs(thumb_root)
+    if df is None:
+        df, _ = split_collection(r"Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz")
+    if Global_monthlist is not None and type(Global_monthlist) is list:
+        df = filtermonth(df, Global_monthlist)
+    bestlist = []
+    prlist = pd.read_csv(prlistfile, names=PRnames, dtype={'PR': str})
+    # old style:
+    # for pr in prlist.PR:
+    #     print(path.join(ref_root, pr+'*'))
+    #     ref_candi_list = glob(path.join(ref_root, pr + '*'))
+    #     if len(ref_candi_list) == 0:
+    #         continue
+    #     ref_path_list.append(ref_candi_list[0])
+
+    # Skip Exist
+    if copydir is not '':
+        finish_list = glob(path.join(copydir, '*.jpg'))
+        jpglist = [path.basename(i) for i in finish_list]
+        finishpr = [pr_from_pid(i) for i in jpglist]
+        # print(len(prlist))
+        prlist = prlist.loc[~prlist.PR.isin(finishpr)]
+        # print(len(prlist))
+
+    if 'start_mon' in prlist.columns and 'end_mon' in prlist.columns:
+        m_start_list = list(prlist.start_mon)
+        m_end_list = list(prlist.end_mon)
+    else:
+        m_start_list = [None] * len(prlist)
+        m_end_list = [None] * len(prlist)
+    # ref_path_list = [path.join(ref_root, pr.zfill(6) + '.tif') for pr in prlist.PR]
+    # print('list done!')
     print('start!')
     p = Pool(nprocess)
     bestlist = p.map(partial(one_best_worker, date_start=date_start, date_end=date_end, df=df, thumb_root=thumb_root, copydir=copydir,

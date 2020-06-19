@@ -7,23 +7,22 @@ from datetime import datetime
 from tqdm import tqdm
 from multiprocessing import Pool
 
-def doOne(pr, date_start, date_end, df, thumb_root, ignoreSLCoff=True, monthlist=(4,5,6,7,8,9,10), n_condi=25):
-    wrs_path, wrs_row = int(pr[:3]), int(pr[3:])
-    cach_candi = '{}_{}_{}_{}.csv'.format(str(wrs_path).zfill(3),
-                                          str(wrs_row).zfill(3),
-                                          datetime.strftime(date_start, '%Y%m%d'),
-                                          datetime.strftime(date_end, '%Y%m%d'))
-    cach_candi_path = path.join(thumb_root, cach_candi)
-    if not path.exists(cach_candi_path):
-        this_condi = down_util.Get_candi_by_onepr(wrs_path, wrs_row, date_start, date_end, df,
-                                                  ignoreSLCoff, monthlist, n_condi)
-        this_condi.to_csv(cach_candi_path)
-
-    else:
-        this_condi = pd.read_csv(cach_candi_path)
-    candi_jpg_list = down_util.download_c1df_thumbnail(this_condi, thumb_root)
-    print('{} has {} candi'.format(pr, len(candi_jpg_list)))
-
+def urlParser(row):
+    dirmaps = {'LANDSAT_1': 'landsat_mss_c1',
+               'LANDSAT_2': 'landsat_mss_c1',
+               'LANDSAT_3': 'landsat_mss_c1',
+               'LANDSAT_4': 'landsat_mss_c1',
+               'LANDSAT_5': 'landsat_tm_c1',
+               'LANDSAT_7': 'landsat_etm_c1',
+               'LANDSAT_8': 'landsat_8_c1'}
+    baseurl = 'https://ims.cr.usgs.gov/browse/'
+    wrs_path = str(row['WRS_PATH']).zfill(3)
+    wrs_row = str(row['WRS_ROW']).zfill(3)
+    pid = row['PRODUCT_ID']
+    craft_id = row['SPACECRAFT_ID']
+    year = pid.split('_')[3][:4]
+    thumbnail_url = baseurl + '/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid + '.jpg'])
+    return thumbnail_url
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Get thumbnails by pr')
@@ -39,15 +38,15 @@ if __name__ == '__main__':
     datepaser = '%Y-%m-%d'
     date_start, date_end = datetime.strptime(args.start_date, datepaser), datetime.strptime(args.end_date, datepaser)
     df, _ = down_util.split_collection(args.gstable)
+    df = df.loc[(df.SPACECRAFT_ID != 'LANDSAT_7') | (df.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
     prlist = pd.read_csv(args.prs, dtype={'PR': str})
     thumb_root = path.join(args.work_dir, '0.thumbnail')
-    if not path.exists(thumb_root):
-        mkdir(thumb_root)
-    p = Pool(args.nMulti)
-    for i in tqdm(p.imap(partial(doOne, date_start=date_start,
-                                 date_end=date_end, df=df, thumb_root=thumb_root),
-                         prlist.PR), total=len(prlist)):
-        pass
-
-
-
+    subDf = df.loc[(df.DATE_ACQUIRED > date_start) &
+                       (df.DATE_ACQUIRED < date_end)]
+    prDf = [str(int(str(i[0]) + str(i[1]).zfill(3))) for i in zip(subDf.WRS_PATH, subDf.WRS_ROW)]
+    subDf['PR'] = prDf
+    del df
+    subDf = subDf.loc[subDf.PR.isin(prlist)]
+    subDf.sort_values(by='PR')
+    subDf['urlThumb'] = subDf.apply(urlParser, axis=1)
+    subDf.to_csv(path.join(thumb_root, 'urlThumb.csv'), index=False)
