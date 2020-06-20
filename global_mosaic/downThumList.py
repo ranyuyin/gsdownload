@@ -24,7 +24,41 @@ def urlParser(row):
     thumbnail_url = baseurl + '/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid + '.jpg'])
     return thumbnail_url
 
+
+def LandsatMetaRead(meta_csv):
+    dfMeta = pd.read_csv(meta_csv, usecols=['path', 'row', 'sensor', 'LANDSAT_PRODUCT_ID',
+                                            'browseURL', 'browseAvailable', 'acquisitionDate',
+                                            'sceneID', 'COLLECTION_CATEGORY'],
+                         parse_dates=['acquisitionDate'])
+    return dfMeta
+
+
+def GetMetaDf(candiFL, SLCoff=False):
+    metaAll = pd.DataFrame()
+    for csvP in candiFL:
+        oneF = LandsatMetaRead(csvP)
+        if path.basename(csvP)=='LANDSAT_ETM_C1.csv.gz':
+            if SLCoff is not True:
+                oneF = oneF.loc[oneF.acquisitionDate < datetime(2003, 5, 31)]
+        metaAll = metaAll.append(oneF, ignore_index=True)
+    return metaAll
+
+# def GetDatasetList(start_date,end_date):
+#     # candiL = ['MSS', 'TM', 'ETM', '8']
+#     candiL = ['TM', 'ETM', '8']
+#     if start_date > datetime(year=2013):
+#         candiL.remove('ETM')
+#         candiL.remove('MSS')
+#         candiL.remove('TM')
+#         # to do
+#
+
 if __name__ == '__main__':
+    metaDir = r'Z:\yinry\0.DEFINITION\LandsatMetaDataUSGS'
+    # candiL = ['MSS', 'TM', 'ETM', '8']
+    candiL = ['TM', 'ETM', '8']
+    candiFL = [path.join(metaDir, 'LANDSAT_{}_C1.csv.gz'.format(i)) for i in candiL]
+    dfMeta = GetMetaDf(candiFL)
     parser = argparse.ArgumentParser(description='Get thumbnails by pr')
     parser.add_argument('-s', help='start date', dest='start_date', required=True)
     parser.add_argument('-e', help='end date', dest='end_date', required=True)
@@ -37,19 +71,21 @@ if __name__ == '__main__':
     args = parser.parse_args()
     datepaser = '%Y-%m-%d'
     date_start, date_end = datetime.strptime(args.start_date, datepaser), datetime.strptime(args.end_date, datepaser)
-    df, _ = down_util.split_collection(args.gstable)
-    df = df.loc[(df.SPACECRAFT_ID != 'LANDSAT_7') | (df.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
+    dfG, _ = down_util.split_collection(args.gstable)
+    dfG = dfG.loc[(dfG.SPACECRAFT_ID != 'LANDSAT_7') | (dfG.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
+    subDfG = dfG.loc[(dfG.DATE_ACQUIRED > date_start) &
+                     (dfG.DATE_ACQUIRED < date_end), ['SCENE_ID', 'BASE_URL']]
     prlist = pd.read_csv(args.prs, dtype={'PR': str})
     thumb_root = path.join(args.work_dir, '0.thumbnail')
     if path.exists(thumb_root) is False:
         makedirs(thumb_root)
-    subDf = df.loc[(df.DATE_ACQUIRED > date_start) &
-                       (df.DATE_ACQUIRED < date_end)]
-    prDf = [str(int(str(i[0]) + str(i[1]).zfill(3))) for i in zip(subDf.WRS_PATH, subDf.WRS_ROW)]
+    subDf = dfMeta.loc[(dfMeta.acquisitionDate > date_start) &
+                       (dfMeta.acquisitionDate < date_end)]
+    prDf = [str(i[0]) + str(i[1]).zfill(3) for i in zip(subDf.path, subDf.row)]
     subDf['PR'] = prDf
     subDf = subDf.loc[subDf.PR.isin(prlist.PR)]
-    subDf.sort_values(by='PR')
-    subDf['urlThumb'] = subDf.apply(urlParser, axis=1)
+    subDf = subDf.sort_values(by='PR')
+    subDf = subDf.merge(subDfG, 'left', left_on='sceneID', right_on='SENSOR_ID')
     subDf.to_csv(path.join(thumb_root, 'candiDf.csv'), index=False)
     f = open(path.join(thumb_root, 'urlThumbD.csv'), 'w')
     for url in subDf.urlThumb:
