@@ -1,7 +1,7 @@
 import down_util
 import argparse
 import pandas as pd
-from os import path, mkdir
+from os import path, makedirs
 from functools import partial
 from datetime import datetime
 from tqdm import tqdm
@@ -41,12 +41,20 @@ if __name__ == '__main__':
     df = df.loc[(df.SPACECRAFT_ID != 'LANDSAT_7') | (df.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
     prlist = pd.read_csv(args.prs, dtype={'PR': str})
     thumb_root = path.join(args.work_dir, '0.thumbnail')
+    if path.exists(thumb_root) is False:
+        makedirs(thumb_root)
     subDf = df.loc[(df.DATE_ACQUIRED > date_start) &
                        (df.DATE_ACQUIRED < date_end)]
     prDf = [str(int(str(i[0]) + str(i[1]).zfill(3))) for i in zip(subDf.WRS_PATH, subDf.WRS_ROW)]
     subDf['PR'] = prDf
-    del df
-    subDf = subDf.loc[subDf.PR.isin(prlist)]
+    subDf = subDf.loc[subDf.PR.isin(prlist.PR)]
     subDf.sort_values(by='PR')
     subDf['urlThumb'] = subDf.apply(urlParser, axis=1)
-    subDf.to_csv(path.join(thumb_root, 'urlThumb.csv'), index=False)
+    subDf.to_csv(path.join(thumb_root, 'candiDf.csv'), index=False)
+    f = open(path.join(thumb_root, 'urlThumbD.csv'), 'w')
+    for url in subDf.urlThumb:
+        wrsPath = url.split('/')[6]
+        wrsrow = url.split('/')[7]
+        opath = path.join(thumb_root, wrsPath, wrsrow)
+        f.write(url+'\n')
+        f.write('\t'+'-d '+ opath+'\n')

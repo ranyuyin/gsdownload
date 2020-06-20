@@ -12,7 +12,8 @@ def parser(ID_str):
 
 def parsexlsx(filename):
     # parsed=pd.DataFrame()
-    data_xlsx = pd.read_excel(filename, names=['ID'], usecols=0)
+    print(filename)
+    data_xlsx = pd.read_excel(filename, names=['ID'], usecols=[0])
     # parsed=data_xlsx.applymap(parser)
     a = [parser(item) for item in data_xlsx.ID]
     data_xlsx = pd.DataFrame(np.array(a), columns=['CRAFT', 'STATION', 'DATE', 'PATH', 'ROW'])
@@ -24,11 +25,12 @@ def mergedir(dirpath):
     allrecord = pd.DataFrame()
     for item in xlsxlist:
         tem=parsexlsx(item)
-        allrecord=allrecord.append(tem,ignore_index=True)
+        allrecord=allrecord.append(tem, ignore_index=True)
     return allrecord
 
 
 if __name__ == '__main__':
-    dirpath = u'C:\\Users\\ranyu\\OneDrive\\文档\\work\\参与项目\\A类先导\\DATA_TABLE'
+    dirpath = r'Z:\yinry\0.DEFINITION\DATA_TABLE_CNGS\DATA_TABLE'
     allrecord = mergedir(dirpath)
     print(allrecord.shape)
+    allrecord.to_csv(r'Z:\yinry\0.DEFINITION\DATA_TABLE_CNGS\DATA_TABLE\merged.csv', index=False)

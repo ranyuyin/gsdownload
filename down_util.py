@@ -3,7 +3,7 @@ import numpy as np
 from glob import glob
 from os import path
 import os
-import re, wget
+import re#, wget
 # import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from tqdm import tqdm
