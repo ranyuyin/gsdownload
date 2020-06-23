@@ -10,6 +10,7 @@ import re
 import numpy as np
 import math
 from datetime import datetime
+from rasterio.warp import transform_bounds
 
 
 envs = {'temp': 'R:\\'}
@@ -395,7 +396,7 @@ class LandsatDst:
         self.time_collected_utc = metadata['PRODUCT_METADATA']['SCENE_CENTER_TIME']
         self.pid = metadata['METADATA_FILE_INFO']['LANDSAT_PRODUCT_ID']
         self.srcList = [path.join(workspace,
-                                  metadata['PRODUCT_METADATA']['FILE_NAME_BAND_'.format(b)]
+                                  metadata['PRODUCT_METADATA']['FILE_NAME_BAND_{}'.format(b)]
                                   ) for b in self.bands]
         self.qaBand = path.join(workspace,
                                 metadata['PRODUCT_METADATA']['FILE_NAME_BAND_QUALITY']
@@ -446,7 +447,7 @@ class LandsatDst:
                     _, rows, cols = im.shape
                     if self.pixel_sunangle:
                         bbox = rio.coords.BoundingBox(
-                            *rio.warp.transform_bounds(
+                            *transform_bounds(
                                 self.crs,
                                 {'init': u'epsg:4326'},
                                 *redset.window_bounds(window)))
