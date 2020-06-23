@@ -478,8 +478,8 @@ class LandsatDst:
         self.maskcloud = maskCloud
         self.pixel_sunangle = pixel_sunangle
         self.toRGB()
-        cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=LZW -dstnodata 0' \
-                  ' -of RLE -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
+        cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=RLE -dstnodata 0' \
+                  ' -of PCIDSK -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
         cmdVar = ' -te {} {} {} {} -te_srs EPSG:4326 -tr {} {} {} {}'
         if self.cross180:
             te = tapRes(self.xLeft, self.yLow, self.xRight, self.yUp, self.oRes, self.cross180)
