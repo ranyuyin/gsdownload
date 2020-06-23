@@ -13,7 +13,7 @@ from datetime import datetime
 from rasterio.warp import transform_bounds
 
 
-envs = {'temp': 'R:\\'}
+envs = {'temp': 'R:\\temp'}
 
 
 def _cast_to_best_type(kd):
@@ -365,14 +365,16 @@ def _main(args):
     keppTemp = args.keppTemp
     # scan List
     mtlList = glob(path.join(inFolder, '**', '*MTL.txt'), recursive=True)
-    p = Pool(n_multi)
-    try:
-        for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
-                                     pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), mtlList), total=len(mtlList)):
-            pass
-    except KeyboardInterrupt:
-        p.terminate()
-        p.join()
+    for mtl in mtlList:
+        toMosaic(mtl,outFolder,maskCloud, OVERWRITE,pixel_sunangle,keppTemp)
+    # p = Pool(n_multi)
+    # try:
+    #     for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
+    #                                  pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), mtlList), total=len(mtlList)):
+    #         pass
+    # except KeyboardInterrupt:
+    #     p.terminate()
+    #     p.join()
 
 
 class LandsatDst:
@@ -477,7 +479,7 @@ class LandsatDst:
         self.pixel_sunangle = pixel_sunangle
         self.toRGB()
         cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=LZW -dstnodata 0' \
-                  '-if GTiff -of RLE -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
+                  ' -of RLE -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
         cmdVar = ' -te {} {} {} {} -te_srs EPSG:4326 -tr {} {} {} {}'
         if self.cross180:
             te = tapRes(self.xLeft, self.yLow, self.xRight, self.yUp, self.oRes, self.cross180)
