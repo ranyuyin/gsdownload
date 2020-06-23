@@ -299,11 +299,14 @@ def _create_lnglats(shape, bbox):
     """
 
     rows, cols = shape
-    w, s, e, n = bbox
+    xmin, s, xmax, n = bbox
     cross = False
-    if e * w < 0:
-        e = 360 + e
+    if xmin * xmax < 0:
+        e = 360 + xmin
+        w = xmax
         cross = True
+    else:
+        w, e = xmin, xmax
     xCell = (e - w) / float(cols)
     yCell = (n - s) / float(rows)
 
