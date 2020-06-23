@@ -73,13 +73,9 @@ def getOname(pid, outFolder, suffix=''):
     return path.join(outFolder, pid + '_4mosaic{}.pix'.format(suffix))
 
 
-def raw2rgb(metadata, bands, scale_factor):
-    pass
-
-
-def toMosaic(mtlFile, outFolder, scale_factor, OVERWRITE):
+def toMosaic(mtlFile, outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp):
     landsatIm = LandsatDst(mtlFile)
-    landsatIm.prepareMosaic(outFolder, OVERWRITE)
+    landsatIm.prepareMosaic(outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
     return
 
 
@@ -360,15 +356,18 @@ def time_to_dec_hour(parsedtime):
 def _main(args):
     inFolder = args.inFolder
     outFolder = args.outFolder
-    scaleFactor = args.scaleFactor
+    # scaleFactor = args.scaleFactor
     n_multi = args.n_multi
+    maskCloud = args.maskCloud
+    OVERWRITE = args.OVERWRITE
+    pixel_sunangle = args.pixel_sunangle
+    keppTemp = args.keppTemp
     # scan List
     mtlList = glob(path.join(inFolder, '**', '*MTL.txt'), recursive=True)
     p = Pool(n_multi)
     try:
-        for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder,
-                                     scale_factor=scaleFactor,
-                                     OVERWRITE=False), mtlList), total=len(mtlList)):
+        for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
+                                     pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), mtlList), total=len(mtlList)):
             pass
     except KeyboardInterrupt:
         p.terminate()
@@ -388,7 +387,7 @@ class LandsatDst:
         mtl = _parse_mtl_txt(mtlfile)
         metadata = mtl['L1_METADATA_FILE']
         self.maskcloud = False
-        self.pixel_sunangle = True
+        self.pixel_sunangle = False
         self.spacecraft = metadata['PRODUCT_METADATA']['SPACECRAFT_ID']
         self.bands = self.rgbMap[self.spacecraft]
         self.clearQaValues = self.clearQaDict[self.spacecraft]
@@ -469,7 +468,7 @@ class LandsatDst:
             qaSrc = None
 
 
-    def prepareMosaic(self, mosaicOfolder, maskCloud=False, OVERWRITE=False, pixel_sunangle=True, keppTemp=False):
+    def prepareMosaic(self, mosaicOfolder, maskCloud=False, OVERWRITE=False, pixel_sunangle=False, keppTemp=False):
         if not OVERWRITE:
             if path.exists(getOname(self.pid, mosaicOfolder)):
                 return
@@ -511,14 +510,14 @@ if __name__ == '__main__':
                         help='input directory')
     parser.add_argument('-o', '--out', metavar='outdir', dest='outFolder', required=True,
                         help='output directory')
-    parser.add_argument('-s', '--scale_factor', metavar='scale factor', type=float, dest='scaleFactor', required=False,
-                        default=0.0001, help='scale factor for the output TOA image (default: 0.0001)')
     parser.add_argument('--pr', metavar='path row filter', dest='path_row', required=False,
                         default='', help='path row list ')
-    parser.add_argument('-b', '--band_mask', metavar='band mask', dest='band_mask', required=False,
-                        default='', help='band(s) to mask')
     parser.add_argument('-m', metavar='multi_process', dest='n_multi', required=False, type=int,
                         default=20, help='band(s) to mask')
+    parser.add_argument('--overwrite', action='store_true', dest='OVERWRITE')
+    parser.add_argument('--oneangle', action='store_false', dest='pixel_sunangle')
+    parser.add_argument('--keeptemp', action='store_true', dest='keppTemp')
+    parser.add_argument('--maskcloud', action='store_true', dest='maskCloud')
     args = parser.parse_args()
     # print(args.outFolder[0])
     # print(args)
