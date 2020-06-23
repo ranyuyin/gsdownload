@@ -300,13 +300,21 @@ def _create_lnglats(shape, bbox):
 
     rows, cols = shape
     w, s, e, n = bbox
+    cross = False
+    if e * w < 0:
+        e = 360 + e
+        cross = True
     xCell = (e - w) / float(cols)
     yCell = (n - s) / float(rows)
 
     lat, lng = np.indices(shape, dtype=np.float32)
-
-    return ((lng * xCell) + w + (xCell / 2.0),
-            (np.flipud(lat) * yCell) + s + (yCell / 2.0))
+    if cross:
+        lng, lat = (lng * xCell) + w + (xCell / 2.0), (np.flipud(lat) * yCell) + s + (yCell / 2.0)
+        lng[lng>180] = lng[lng>180] - 360
+        return lng, lat
+    else:
+        return ((lng * xCell) + w + (xCell / 2.0),
+                (np.flipud(lat) * yCell) + s + (yCell / 2.0))
 
 
 def parse_utc_string(collected_date, collected_time_utc):
