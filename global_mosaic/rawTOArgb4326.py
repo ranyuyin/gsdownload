@@ -427,9 +427,7 @@ class LandsatDst:
         # todo mask cloud
         with rio.open(self.srcList[0]) as redset, \
                 rio.open(self.srcList[1]) as greenset, \
-                rio.open(self.srcList[2]) as blueset:
-            if self.maskcloud == True:
-                qaSrc = rio.open(self.qaBand)
+                rio.open(self.srcList[2]) as blueset, rio.open(self.qaBand) as qaSrc:
             srcList = [redset, greenset, blueset]
             meta = redset.meta.copy()
             self.crs = meta['crs']
@@ -441,8 +439,8 @@ class LandsatDst:
                 for ji, window in redset.block_windows(1):
                     imBands = [src.read(1, window=window) for src in srcList]
                     im = np.stack(imBands)
+                    imqa = qaSrc.read(1, window=window)
                     if self.maskcloud:
-                        imqa = qaSrc.read(1, window=window)
                         clearMask = np.zeros(imBands[0].shape, dtype=np.bool)
                         for clearValue in self.clearQaValues:
                             clearMask[imqa == clearValue] = True
@@ -463,9 +461,9 @@ class LandsatDst:
                     if self.maskcloud:
                         mask = clearMask == False
                     else:
-                        mask = im == 0
+                        mask = imqa == 1
                     rgb = reflectance(im, self.M, self.A, E).clip(min=0, max=0.55) * (254 / 0.55) + 1
-                    rgb[mask] = 0
+                    rgb[:, mask] = 0
                     dst.write(rgb.astype('uint8'), [1, 2, 3], window=window)
         if self.maskcloud:
             qaSrc = None
@@ -478,7 +476,7 @@ class LandsatDst:
         self.maskcloud = maskCloud
         self.pixel_sunangle = pixel_sunangle
         self.toRGB()
-        cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=RLE -dstnodata 0' \
+        cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=RLE -dstnodata 0 -overwrite' \
                   ' -of PCIDSK -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
         cmdVar = ' -te {} {} {} {} -te_srs EPSG:4326 -tr {} {} {} {}'
         if self.cross180:
