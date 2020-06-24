@@ -384,22 +384,12 @@ def _main(args):
         print('using PR List.\n')
         dfTodoPr = pd.read_csv(prList)
         dfMTL = dfMTL.loc[dfMTL.PR.isin(dfTodoPr.PR)]
-    for mtl in dfMTL.mtl:
-        toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
-    # p = Pool(n_multi)
-    # try:
-    #     for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
-    #                                  pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), mtlList), total=len(mtlList)):
-    #         pass
-    # except KeyboardInterrupt:
-    #     p.terminate()
-    #     p.join()
-    # for mtl in mtlList:
-    #     toMosaic(mtl,outFolder,maskCloud, OVERWRITE,pixel_sunangle,keppTemp)
+    # for mtl in dfMTL.mtl:
+    #     toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
     p = Pool(n_multi)
     try:
         for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
-                                     pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), mtlList), total=len(mtlList)):
+                                     pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), dfMTL.mtl), total=len(mtlList)):
             pass
     except KeyboardInterrupt:
         p.terminate()
