@@ -300,14 +300,25 @@ def _create_lnglats(shape, bbox):
     """
 
     rows, cols = shape
-    w, s, e, n = bbox
+    xmin, s, xmax, n = bbox
+    cross = False
+    if xmin * xmax < 0:
+        e = 360 + xmin
+        w = xmax
+        cross = True
+    else:
+        w, e = xmin, xmax
     xCell = (e - w) / float(cols)
     yCell = (n - s) / float(rows)
 
     lat, lng = np.indices(shape, dtype=np.float32)
-
-    return ((lng * xCell) + w + (xCell / 2.0),
-            (np.flipud(lat) * yCell) + s + (yCell / 2.0))
+    if cross:
+        lng, lat = (lng * xCell) + w + (xCell / 2.0), (np.flipud(lat) * yCell) + s + (yCell / 2.0)
+        lng[lng>180] = lng[lng>180] - 360
+        return lng, lat
+    else:
+        return ((lng * xCell) + w + (xCell / 2.0),
+                (np.flipud(lat) * yCell) + s + (yCell / 2.0))
 
 
 def parse_utc_string(collected_date, collected_time_utc):
@@ -383,6 +394,16 @@ def _main(args):
     # except KeyboardInterrupt:
     #     p.terminate()
     #     p.join()
+    # for mtl in mtlList:
+    #     toMosaic(mtl,outFolder,maskCloud, OVERWRITE,pixel_sunangle,keppTemp)
+    p = Pool(n_multi)
+    try:
+        for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
+                                     pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), mtlList), total=len(mtlList)):
+            pass
+    except KeyboardInterrupt:
+        p.terminate()
+        p.join()
 
 
 class LandsatDst:
@@ -435,9 +456,7 @@ class LandsatDst:
         # todo mask cloud
         with rio.open(self.srcList[0]) as redset, \
                 rio.open(self.srcList[1]) as greenset, \
-                rio.open(self.srcList[2]) as blueset:
-            if self.maskcloud == True:
-                qaSrc = rio.open(self.qaBand)
+                rio.open(self.srcList[2]) as blueset, rio.open(self.qaBand) as qaSrc:
             srcList = [redset, greenset, blueset]
             meta = redset.meta.copy()
             self.crs = meta['crs']
@@ -449,8 +468,8 @@ class LandsatDst:
                 for ji, window in redset.block_windows(1):
                     imBands = [src.read(1, window=window) for src in srcList]
                     im = np.stack(imBands)
+                    imqa = qaSrc.read(1, window=window)
                     if self.maskcloud:
-                        imqa = qaSrc.read(1, window=window)
                         clearMask = np.zeros(imBands[0].shape, dtype=np.bool)
                         for clearValue in self.clearQaValues:
                             clearMask[imqa == clearValue] = True
@@ -471,9 +490,9 @@ class LandsatDst:
                     if self.maskcloud:
                         mask = clearMask == False
                     else:
-                        mask = im == 0
+                        mask = imqa == 1
                     rgb = reflectance(im, self.M, self.A, E).clip(min=0, max=0.55) * (254 / 0.55) + 1
-                    rgb[mask] = 0
+                    rgb[:, mask] = 0
                     dst.write(rgb.astype('uint8'), [1, 2, 3], window=window)
         if self.maskcloud:
             qaSrc = None
@@ -486,7 +505,7 @@ class LandsatDst:
         self.maskcloud = maskCloud
         self.pixel_sunangle = pixel_sunangle
         self.toRGB()
-        cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=RLE -dstnodata 0' \
+        cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=RLE -dstnodata 0 -overwrite -q' \
                   ' -of PCIDSK -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
         cmdVar = ' -te {} {} {} {} -te_srs EPSG:4326 -tr {} {} {} {}'
         if self.cross180:
@@ -495,15 +514,15 @@ class LandsatDst:
             oP2 = getOname(self.pid, mosaicOfolder, '2')
             cmd1 = cmdBase + cmdVar.format(*te[0], self.oRes, self.oRes, self.tempRgbName, oP1)
             cmd2 = cmdBase + cmdVar.format(*te[1], self.oRes, self.oRes, self.tempRgbName, oP2)
-            print(cmd1)
-            print(cmd2)
+            # print(cmd1)
+            # print(cmd2)
             system(cmd1)
             system(cmd2)
         else:
             te = tapRes(self.xLeft, self.yLow, self.xRight, self.yUp, self.oRes, self.cross180)
             oP = getOname(self.pid, mosaicOfolder)
             cmd = cmdBase + cmdVar.format(*te, self.oRes, self.oRes, self.tempRgbName, oP)
-            print(cmd)
+            # print(cmd)
             system(cmd)
         if keppTemp:
             return
