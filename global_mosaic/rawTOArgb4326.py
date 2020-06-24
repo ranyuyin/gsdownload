@@ -11,6 +11,7 @@ import numpy as np
 import math
 from datetime import datetime
 from rasterio.warp import transform_bounds
+import pandas as pd
 
 
 envs = {'temp': 'R:\\temp'}
@@ -363,10 +364,17 @@ def _main(args):
     OVERWRITE = args.OVERWRITE
     pixel_sunangle = args.pixel_sunangle
     keppTemp = args.keppTemp
+    prList = args.path_row
     # scan List
     mtlList = glob(path.join(inFolder, '**', '*MTL.txt'), recursive=True)
-    for mtl in mtlList:
-        toMosaic(mtl,outFolder,maskCloud, OVERWRITE,pixel_sunangle,keppTemp)
+    dfMTL = pd.dataframe(data={'mtl': mtlList})
+    dfMTL['PR'] = [int(path.basename(mtl).split('_')[2]) for mtl in dfMTL.mtl]
+    if path.exists(prList):
+        print('using PR List.\n')
+        dfTodoPr = pd.read_csv(prList)
+        dfMTL = dfMTL.loc[dfMTL.PR.isin(dfTodoPr.PR)]
+    for mtl in dfMTL.mtl:
+        toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
     # p = Pool(n_multi)
     # try:
     #     for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
