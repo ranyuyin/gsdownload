@@ -497,6 +497,9 @@ class LandsatDst:
         if not OVERWRITE:
             if path.exists(getOname(self.pid, mosaicOfolder)):
                 return
+            elif path.exists(getOname(self.pid, mosaicOfolder, '1')) and path.exists(getOname(self.pid, mosaicOfolder, '2')):
+                return
+
         self.maskcloud = maskCloud
         self.pixel_sunangle = pixel_sunangle
         self.toRGB()
