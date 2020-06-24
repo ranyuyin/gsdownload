@@ -381,7 +381,7 @@ def _main(args):
     prList = args.path_row
     # scan List
     mtlList = glob(path.join(inFolder, '**', '*MTL.txt'), recursive=True)
-    dfMTL = pd.dataframe(data={'mtl': mtlList})
+    dfMTL = pd.DataFrame(data={'mtl': mtlList})
     dfMTL['PR'] = [int(path.basename(mtl).split('_')[2]) for mtl in dfMTL.mtl]
     if path.exists(prList):
         print('using PR List.\n')
