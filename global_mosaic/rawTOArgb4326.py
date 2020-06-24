@@ -305,7 +305,7 @@ def _create_lnglats(shape, bbox):
     rows, cols = shape
     xmin, s, xmax, n = bbox
     cross = False
-    if xmin * xmax < 0:
+    if xmin * xmax < 0 and xmax>170:
         e = 360 + xmin
         w = xmax
         cross = True
@@ -387,16 +387,18 @@ def _main(args):
         print('using PR List.\n')
         dfTodoPr = pd.read_csv(prList)
         dfMTL = dfMTL.loc[dfMTL.PR.isin(dfTodoPr.PR)]
-    # for mtl in dfMTL.mtl:
-    #     toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
-    p = Pool(n_multi)
-    try:
-        for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
-                                     pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), dfMTL.mtl), total=len(mtlList)):
-            pass
-    except KeyboardInterrupt:
-        p.terminate()
-        p.join()
+    if args.DEBUG:
+        for mtl in dfMTL.mtl:
+            toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
+    else:
+        p = Pool(n_multi)
+        try:
+            for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
+                                         pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), dfMTL.mtl), total=len(mtlList)):
+                pass
+        except KeyboardInterrupt:
+            p.terminate()
+            p.join()
 
 
 class LandsatDst:
@@ -541,6 +543,7 @@ if __name__ == '__main__':
     parser.add_argument('--oneangle', action='store_false', dest='pixel_sunangle')
     parser.add_argument('--keeptemp', action='store_true', dest='keppTemp')
     parser.add_argument('--maskcloud', action='store_true', dest='maskCloud')
+    parser.add_argument('--DEBUG', action='store_true', dest='DEBUG')
     args = parser.parse_args()
     # print(args.outFolder[0])
     # print(args)
