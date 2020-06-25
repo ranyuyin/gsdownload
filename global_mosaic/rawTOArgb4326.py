@@ -14,7 +14,7 @@ from rasterio.warp import transform_bounds
 import pandas as pd
 
 
-envs = {'temp': 'R:\\temp'}
+envs = {'temp': 'R:\\Temp'}
 
 
 def _cast_to_best_type(kd):
@@ -380,9 +380,14 @@ def _main(args):
     keppTemp = args.keppTemp
     prList = args.path_row
     # scan List
-    mtlList = glob(path.join(inFolder, '**', '*MTL.txt'), recursive=True)
-    dfMTL = pd.DataFrame(data={'mtl': mtlList})
-    dfMTL['PR'] = [int(path.basename(mtl).split('_')[2]) for mtl in dfMTL.mtl]
+    cachMTLname = path.join(inFolder, '_mtlCach.csv')
+    if args.cach and path.exists(cachMTLname):
+        dfMTL = pd.read_csv(cachMTLname)
+    else:
+        mtlList = glob(path.join(inFolder, '**', '*MTL.txt'), recursive=True)
+        dfMTL = pd.DataFrame(data={'mtl': mtlList})
+        dfMTL['PR'] = [int(path.basename(mtl).split('_')[2]) for mtl in dfMTL.mtl]
+        dfMTL.to_csv(cachMTLname, index=False)
     if path.exists(prList):
         print('using PR List.\n')
         dfTodoPr = pd.read_csv(prList)
@@ -510,18 +515,24 @@ class LandsatDst:
             te = tapRes(self.xLeft, self.yLow, self.xRight, self.yUp, self.oRes, self.cross180)
             oP1 = getOname(self.pid, mosaicOfolder, '1')
             oP2 = getOname(self.pid, mosaicOfolder, '2')
-            cmd1 = cmdBase + cmdVar.format(*te[0], self.oRes, self.oRes, self.tempRgbName, oP1)
-            cmd2 = cmdBase + cmdVar.format(*te[1], self.oRes, self.oRes, self.tempRgbName, oP2)
+            oP1t = getOname(self.pid, envs['temp'], '1')
+            oP2t = getOname(self.pid, envs['temp'], '2')
+            cmd1 = cmdBase + cmdVar.format(*te[0], self.oRes, self.oRes, self.tempRgbName, oP1t)
+            cmd2 = cmdBase + cmdVar.format(*te[1], self.oRes, self.oRes, self.tempRgbName, oP2t)
             # print(cmd1)
             # print(cmd2)
             system(cmd1)
             system(cmd2)
+            shutil.move(oP1t, oP1)
+            shutil.move(oP2t, oP2)
         else:
             te = tapRes(self.xLeft, self.yLow, self.xRight, self.yUp, self.oRes, self.cross180)
             oP = getOname(self.pid, mosaicOfolder)
-            cmd = cmdBase + cmdVar.format(*te, self.oRes, self.oRes, self.tempRgbName, oP)
+            oPt = getOname(self.pid, envs['temp'])
+            cmd = cmdBase + cmdVar.format(*te, self.oRes, self.oRes, self.tempRgbName, oPt)
             # print(cmd)
             system(cmd)
+            shutil.move(oPt, oP)
         if keppTemp:
             return
         else:
@@ -547,6 +558,7 @@ if __name__ == '__main__':
     parser.add_argument('--keeptemp', action='store_true', dest='keppTemp')
     parser.add_argument('--maskcloud', action='store_true', dest='maskCloud')
     parser.add_argument('--DEBUG', action='store_true', dest='DEBUG')
+    parser.add_argument('--nocach', action='store_false', dest='cach')
     args = parser.parse_args()
     # print(args.outFolder[0])
     # print(args)
