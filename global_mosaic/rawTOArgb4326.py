@@ -12,6 +12,7 @@ import math
 from datetime import datetime
 from rasterio.warp import transform_bounds
 import pandas as pd
+import shutil
 
 
 envs = {'temp': 'R:\\Temp'}
