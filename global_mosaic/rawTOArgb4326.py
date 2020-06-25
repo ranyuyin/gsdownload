@@ -400,7 +400,7 @@ def _main(args):
         p = Pool(n_multi)
         try:
             for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
-                                         pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), dfMTL.mtl), total=len(mtlList)):
+                                         pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), dfMTL.mtl), total=len(dfMTL)):
                 pass
         except KeyboardInterrupt:
             p.terminate()
