@@ -492,6 +492,7 @@ class LandsatDst:
                         mask = clearMask == False
                     else:
                         mask = imqa == 1
+                        mask[imqa==0] = True
                     rgb = reflectance(im, self.M, self.A, E).clip(min=0, max=0.55) * (254 / 0.55) + 1
                     rgb[:, mask] = 0
                     dst.write(rgb.astype('uint8'), [1, 2, 3], window=window)
