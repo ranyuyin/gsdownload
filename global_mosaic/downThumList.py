@@ -88,9 +88,9 @@ if __name__ == '__main__':
     subDf = subDf.merge(subDfG, 'left', left_on='sceneID', right_on='SCENE_ID')
     subDf.to_csv(path.join(thumb_root, 'candiDf.csv'), index=False)
     f = open(path.join(thumb_root, 'urlThumbD.csv'), 'w')
-    for url in subDf.urlThumb:
+    for url in subDf.browseURL:
         wrsPath = url.split('/')[6]
         wrsrow = url.split('/')[7]
         opath = path.join(thumb_root, wrsPath, wrsrow)
         f.write(url+'\n')
-        f.write('\t'+'-d '+ opath+'\n')
+        f.write('\t'+'dir='+ opath+'\n')

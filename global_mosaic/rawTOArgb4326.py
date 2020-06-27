@@ -373,6 +373,8 @@ def time_to_dec_hour(parsedtime):
 def _main(args):
     inFolder = args.inFolder
     outFolder = args.outFolder
+    if not path.exists(outFolder):
+        os.mkdir(outFolder)
     # scaleFactor = args.scaleFactor
     n_multi = args.n_multi
     maskCloud = args.maskCloud
