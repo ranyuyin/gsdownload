@@ -32,8 +32,9 @@ class utmim:
                   ' -of PCIDSK -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
         cmdVar = ' -te {} {} {} {} -te_srs EPSG:4326 -tr {} {} {} {}'
         if self.cross180:
-            te = tapRes(self.geoBounds.left, self.geoBounds.bottom,
-                        self.geoBounds.right, self.geoBounds.top, self.oRes, self.cross180)
+            # self.geoBounds are xmin, xmax, not left, right...
+            te = tapRes(self.geoBounds.right, self.geoBounds.bottom,
+                        self.geoBounds.left, self.geoBounds.top, self.oRes, self.cross180)
             oP1 = getOname(self.pid, mosaicOfolder, '1')
             oP2 = getOname(self.pid, mosaicOfolder, '2')
             if os.path.exists(oP1) and os.path.exists(oP2):
