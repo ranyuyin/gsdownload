@@ -36,6 +36,8 @@ class utmim:
                         self.geoBounds.right, self.geoBounds.top, self.oRes, self.cross180)
             oP1 = getOname(self.pid, mosaicOfolder, '1')
             oP2 = getOname(self.pid, mosaicOfolder, '2')
+            if os.path.exists(oP1) and os.path.exists(oP2):
+                return
             oP1t = getOname(self.pid, envs['temp'], '1')
             oP2t = getOname(self.pid, envs['temp'], '2')
             cmd1 = cmdBase + cmdVar.format(*te[0], self.oRes, self.oRes, self.imPath, oP1t)
@@ -50,6 +52,8 @@ class utmim:
             te = tapRes(self.geoBounds.left, self.geoBounds.bottom,
                         self.geoBounds.right, self.geoBounds.top, self.oRes, self.cross180)
             oP = getOname(self.pid, mosaicOfolder)
+            if os.path.exists(oP) and os.path.exists(oP):
+                return
             oPt = getOname(self.pid, envs['temp'])
             cmd = cmdBase + cmdVar.format(*te, self.oRes, self.oRes, self.imPath, oPt)
             # print(cmd)
