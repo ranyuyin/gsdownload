@@ -5,7 +5,7 @@ from functools import partial
 from glob import glob
 from multiprocessing import Pool
 from sys import argv
-from rasterio.warp import transform_bounds
+from rasterio.warp import transform_bounds, transform
 import rasterio as rio
 from tqdm import tqdm
 
@@ -21,7 +21,7 @@ class utmim:
                 *transform_bounds(
                     src.crs,
                     {'init': u'epsg:4326'},
-                    *src.bounds))
+                    *src.bounds, 0))
             self.imPath = imPath
             self.pid = os.path.splitext(os.path.basename(imPath))[0]
             if self.geoBounds.left * self.geoBounds.right < 0 and self.geoBounds.right > 170:

@@ -482,7 +482,7 @@ class LandsatDst:
                             *transform_bounds(
                                 self.crs,
                                 {'init': u'epsg:4326'},
-                                *redset.window_bounds(window)))
+                                *redset.window_bounds(window), 0))
                         E = sun_elevation(
                             bbox,
                             (rows, cols),
