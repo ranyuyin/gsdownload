@@ -86,6 +86,7 @@ if __name__ == '__main__':
     subDf = subDf.loc[subDf.PR.isin(prlist.PR)]
     subDf = subDf.sort_values(by='PR')
     subDf = subDf.merge(subDfG, 'left', left_on='sceneID', right_on='SCENE_ID')
+    subDf = subDf.drop_duplicates('LANDSAT_PRODUCT_ID')
     subDf.to_csv(path.join(thumb_root, 'candiDf.csv'), index=False)
     f = open(path.join(thumb_root, 'urlThumbD.csv'), 'w')
     for url in subDf.browseURL:
