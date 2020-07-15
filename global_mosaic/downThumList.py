@@ -64,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', help='end date', dest='end_date', required=True)
     parser.add_argument('-w', help='work dir', dest='work_dir', required=True)
     parser.add_argument('-d', help='path row definition', dest='prs',
-                        required=False, default=r"Z:\yinry\global_mosaic\0.def\prwithrange.csv")
+                        required=False, default=r"Z:\yinry\global_mosaic\0.def\prwithrange0621.csv")
     parser.add_argument('-i', help='index file', dest='gstable',
                         required=False, default=r'Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz')
     parser.add_argument('-m', help='multi process', dest='nMulti', required=False, default=15, type=int)
@@ -73,14 +73,14 @@ if __name__ == '__main__':
     date_start, date_end = datetime.strptime(args.start_date, datepaser), datetime.strptime(args.end_date, datepaser)
     dfG, _ = down_util.split_collection(args.gstable)
     dfG = dfG.loc[(dfG.SPACECRAFT_ID != 'LANDSAT_7') | (dfG.DATE_ACQUIRED < datetime(year=2003, month=5, day=31))]
-    subDfG = dfG.loc[(dfG.DATE_ACQUIRED > date_start) &
-                     (dfG.DATE_ACQUIRED < date_end), ['SCENE_ID', 'BASE_URL']]
+    subDfG = dfG.loc[(dfG.DATE_ACQUIRED >= date_start) &
+                     (dfG.DATE_ACQUIRED <= date_end), ['SCENE_ID', 'BASE_URL']]
     prlist = pd.read_csv(args.prs, dtype={'PR': str})
     thumb_root = path.join(args.work_dir, '0.thumbnail')
     if path.exists(thumb_root) is False:
         makedirs(thumb_root)
-    subDf = dfMeta.loc[(dfMeta.acquisitionDate > date_start) &
-                       (dfMeta.acquisitionDate < date_end)]
+    subDf = dfMeta.loc[(dfMeta.acquisitionDate >= date_start) &
+                       (dfMeta.acquisitionDate <= date_end)]
     prDf = [str(i[0]) + str(i[1]).zfill(3) for i in zip(subDf.path, subDf.row)]
     subDf['PR'] = prDf
     subDf = subDf.loc[subDf.PR.isin(prlist.PR)]
