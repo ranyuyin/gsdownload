@@ -76,8 +76,8 @@ def getOname(pid, outFolder, suffix=''):
     return path.join(outFolder, pid + '_4mosaic{}.pix'.format(suffix))
 
 
-def toMosaic(mtlFile, outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp):
-    landsatIm = LandsatDst(mtlFile)
+def toMosaic(mtlFile, outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb):
+    landsatIm = LandsatDst(mtlFile, maprgb)
     try:
         landsatIm.prepareMosaic(outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
     except:
@@ -382,6 +382,7 @@ def _main(args):
     pixel_sunangle = args.pixel_sunangle
     keppTemp = args.keppTemp
     prList = args.path_row
+    maprgb = args.rgb
     # scan List
     cachMTLname = path.join(inFolder, '_mtlCach.csv')
     if args.cach and path.exists(cachMTLname):
@@ -397,12 +398,12 @@ def _main(args):
         dfMTL = dfMTL.loc[dfMTL.PR.isin(dfTodoPr.PR)]
     if args.DEBUG:
         for mtl in dfMTL.mtl:
-            toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
+            toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb)
     else:
         p = Pool(n_multi)
         try:
             for i in tqdm(p.imap(partial(toMosaic, outFolder=outFolder, maskCloud=maskCloud, OVERWRITE=OVERWRITE,
-                                         pixel_sunangle=pixel_sunangle, keppTemp=keppTemp), dfMTL.mtl), total=len(dfMTL)):
+                                         pixel_sunangle=pixel_sunangle, keppTemp=keppTemp, maprgb=maprgb), dfMTL.mtl), total=len(dfMTL)):
                 pass
         except KeyboardInterrupt:
             p.terminate()
@@ -413,18 +414,22 @@ class LandsatDst:
     rgbMap = {'LANDSAT_5': '543',
               'LANDSAT_7': '543',
               'LANDSAT_8': '654'}
+    allMap = {'LANDSAT_8': '234567'}
     clearQaDict = {'LANDSAT_5': [672, 676, 680, 684],
                    'LANDSAT_7': [672, 676, 680, 684],
                    'LANDSAT_8': [2720, 2724, 2728, 2732]}
 
-    def __init__(self, mtlfile):
+    def __init__(self, mtlfile, maprgb=False):
         workspace = path.split(mtlfile)[0]
         mtl = _parse_mtl_txt(mtlfile)
         metadata = mtl['L1_METADATA_FILE']
         self.maskcloud = False
         self.pixel_sunangle = False
         self.spacecraft = metadata['PRODUCT_METADATA']['SPACECRAFT_ID']
-        self.bands = self.rgbMap[self.spacecraft]
+        if maprgb:
+            self.bands = self.rgbMap[self.spacecraft]
+        else:
+            self.bands = self.allMap[self.spacecraft]
         self.clearQaValues = self.clearQaDict[self.spacecraft]
         self.date_collected = metadata['PRODUCT_METADATA']['DATE_ACQUIRED']
         self.time_collected_utc = metadata['PRODUCT_METADATA']['SCENE_CENTER_TIME']
@@ -446,8 +451,8 @@ class LandsatDst:
         self.xRight = metadata['PRODUCT_METADATA']['CORNER_UR_LON_PRODUCT']
         self.yUp = metadata['PRODUCT_METADATA']['CORNER_UL_LAT_PRODUCT']
         self.yLow = metadata['PRODUCT_METADATA']['CORNER_LR_LAT_PRODUCT']
-        self.count = 3
-        self.tempRgbName = path.join(envs['temp'], self.pid + '_rgb.tif')
+        self.count = len(self.bands)
+        self.tempOutName = path.join(envs['temp'], self.pid + '_out.tif')
         if self.xLeft * self.xRight < 0:
             self.cross180 = True
         else:
@@ -455,20 +460,19 @@ class LandsatDst:
         self.oRes = 0.00025
 
 
-    def toRGB(self):
+    def toRTM(self):
         # todo mask cloud
-        with rio.open(self.srcList[0]) as redset, \
-                rio.open(self.srcList[1]) as greenset, \
-                rio.open(self.srcList[2]) as blueset, rio.open(self.qaBand) as qaSrc:
-            srcList = [redset, greenset, blueset]
-            meta = redset.meta.copy()
+        srcList = [rio.open(i) for i in self.srcList]
+        with rio.open(self.qaBand) as qaSrc:
+            # srcList = [redset, greenset, blueset]
+            meta = srcList[0].meta.copy()
             self.crs = meta['crs']
             meta.update({'COMPRESS': 'LZW',
                          'dtype': 'uint8',
-                         'count': 3,
+                         'count': self.count,
                          'nodata': 0})
-            with rio.open(self.tempRgbName, 'w', **meta) as dst:
-                for ji, window in redset.block_windows(1):
+            with rio.open(self.tempOutName, 'w', **meta) as dst:
+                for ji, window in srcList[0].block_windows(1):
                     imBands = [src.read(1, window=window) for src in srcList]
                     im = np.stack(imBands)
                     imqa = qaSrc.read(1, window=window)
@@ -482,7 +486,7 @@ class LandsatDst:
                             *transform_bounds(
                                 self.crs,
                                 {'init': u'epsg:4326'},
-                                *redset.window_bounds(window), 0))
+                                *srcList[0].window_bounds(window), 0))
                         E = sun_elevation(
                             bbox,
                             (rows, cols),
@@ -497,7 +501,7 @@ class LandsatDst:
                         mask[imqa==0] = True
                     rgb = reflectance(im, self.M, self.A, E).clip(min=0, max=0.55) * (254 / 0.55) + 1
                     rgb[:, mask] = 0
-                    dst.write(rgb.astype('uint8'), [1, 2, 3], window=window)
+                    dst.write(rgb.astype('uint8'), list(range(1,self.count+1)), window=window)
         if self.maskcloud:
             qaSrc = None
 
@@ -511,7 +515,7 @@ class LandsatDst:
 
         self.maskcloud = maskCloud
         self.pixel_sunangle = pixel_sunangle
-        self.toRGB()
+        self.toRTM()
         # -dstnodata 0
         cmdBase = 'gdalwarp -t_srs EPSG:4326 -co COMPRESSION=RLE -overwrite -q' \
                   ' -of PCIDSK -co TILESIZE=256 -co INTERLEAVING=TILED -r cubic -wm 3000 -srcnodata 0'
@@ -522,8 +526,8 @@ class LandsatDst:
             oP2 = getOname(self.pid, mosaicOfolder, '2')
             oP1t = getOname(self.pid, envs['temp'], '1')
             oP2t = getOname(self.pid, envs['temp'], '2')
-            cmd1 = cmdBase + cmdVar.format(*te[0], self.oRes, self.oRes, self.tempRgbName, oP1t)
-            cmd2 = cmdBase + cmdVar.format(*te[1], self.oRes, self.oRes, self.tempRgbName, oP2t)
+            cmd1 = cmdBase + cmdVar.format(*te[0], self.oRes, self.oRes, self.tempOutName, oP1t)
+            cmd2 = cmdBase + cmdVar.format(*te[1], self.oRes, self.oRes, self.tempOutName, oP2t)
             # print(cmd1)
             # print(cmd2)
             system(cmd1)
@@ -534,7 +538,7 @@ class LandsatDst:
             te = tapRes(self.xLeft, self.yLow, self.xRight, self.yUp, self.oRes, self.cross180)
             oP = getOname(self.pid, mosaicOfolder)
             oPt = getOname(self.pid, envs['temp'])
-            cmd = cmdBase + cmdVar.format(*te, self.oRes, self.oRes, self.tempRgbName, oPt)
+            cmd = cmdBase + cmdVar.format(*te, self.oRes, self.oRes, self.tempOutName, oPt)
             # print(cmd)
             system(cmd)
             shutil.move(oPt, oP)
@@ -542,9 +546,9 @@ class LandsatDst:
             return
         else:
             try:
-                os.remove(self.tempRgbName)
+                os.remove(self.tempOutName)
             except:
-                print('Delete {} error'.format(path.basename(self.tempRgbName)))
+                print('Delete {} error'.format(path.basename(self.tempOutName)))
             return
 
 
@@ -564,6 +568,7 @@ if __name__ == '__main__':
     parser.add_argument('--maskcloud', action='store_true', dest='maskCloud')
     parser.add_argument('--DEBUG', action='store_true', dest='DEBUG')
     parser.add_argument('--nocach', action='store_false', dest='cach')
+    parser.add_argument('--rgb', action='store_true', dest='rgb')
     args = parser.parse_args()
     # print(args.outFolder[0])
     # print(args)

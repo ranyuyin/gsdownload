@@ -4,31 +4,14 @@ import pandas as pd
 from os import path, makedirs
 from functools import partial
 from datetime import datetime
+import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
-
-def urlParser(row):
-    dirmaps = {'LANDSAT_1': 'landsat_mss_c1',
-               'LANDSAT_2': 'landsat_mss_c1',
-               'LANDSAT_3': 'landsat_mss_c1',
-               'LANDSAT_4': 'landsat_mss_c1',
-               'LANDSAT_5': 'landsat_tm_c1',
-               'LANDSAT_7': 'landsat_etm_c1',
-               'LANDSAT_8': 'landsat_8_c1'}
-    baseurl = 'https://ims.cr.usgs.gov/browse/'
-    wrs_path = str(row['WRS_PATH']).zfill(3)
-    wrs_row = str(row['WRS_ROW']).zfill(3)
-    pid = row['PRODUCT_ID']
-    craft_id = row['SPACECRAFT_ID']
-    year = pid.split('_')[3][:4]
-    thumbnail_url = baseurl + '/'.join([dirmaps[craft_id], year, wrs_path, wrs_row, pid + '.jpg'])
-    return thumbnail_url
-
 
 def LandsatMetaRead(meta_csv):
     dfMeta = pd.read_csv(meta_csv, usecols=['path', 'row', 'sensor', 'LANDSAT_PRODUCT_ID',
                                             'browseURL', 'browseAvailable', 'acquisitionDate',
-                                            'sceneID', 'COLLECTION_CATEGORY'],
+                                            'sceneID', 'COLLECTION_CATEGORY', 'DATA_TYPE_L1'],
                          parse_dates=['acquisitionDate'])
     return dfMeta
 
@@ -68,6 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', help='index file', dest='gstable',
                         required=False, default=r'Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz')
     parser.add_argument('-m', help='multi process', dest='nMulti', required=False, default=15, type=int)
+    parser.add_argument('--badin', action='store_false', dest='goodOnly')
     args = parser.parse_args()
     datepaser = '%Y-%m-%d'
     date_start, date_end = datetime.strptime(args.start_date, datepaser), datetime.strptime(args.end_date, datepaser)
@@ -85,6 +69,17 @@ if __name__ == '__main__':
     subDf['PR'] = prDf
     subDf = subDf.loc[subDf.PR.isin(prlist.PR)]
     subDf = subDf.sort_values(by='PR')
+    subDf = subDf.loc[~(subDf.COLLECTION_CATEGORY == 'RT')]
+    subDf = subDf.loc[~subDf.DATA_TYPE_L1.str.endswith('L1GS')]
+    if args.goodOnly:
+        print('using only L1TP if available')
+        subDfL1T = subDf.loc[subDf.DATA_TYPE_L1.str.endswith('L1TP')]
+        grouped = subDfL1T.groupby('PR')
+        gpcounts = grouped['DATA_TYPE_L1'].agg(np.size)
+        # lowlevel = 0.1*gpcounts.max()
+        # lowlevel = 2 if lowlevel < 2 else lowlevel
+        DeL1GTPr = gpcounts.loc[gpcounts >= 2].index
+        subDf = subDf.loc[~(subDf.PR.isin(DeL1GTPr)&(~subDf.DATA_TYPE_L1.str.endswith('L1TP')))]
     subDf = subDf.merge(subDfG, 'left', left_on='sceneID', right_on='SCENE_ID')
     subDf = subDf.drop_duplicates('LANDSAT_PRODUCT_ID')
     subDf.to_csv(path.join(thumb_root, 'candiDf.csv'), index=False)
