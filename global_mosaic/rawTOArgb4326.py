@@ -383,6 +383,7 @@ def _main(args):
     keppTemp = args.keppTemp
     prList = args.path_row
     maprgb = args.rgb
+    goodThumbDir = args.goodThumbDir
     # scan List
     cachMTLname = path.join(inFolder, '_mtlCach.csv')
     if args.cach and path.exists(cachMTLname):
@@ -391,11 +392,17 @@ def _main(args):
         mtlList = glob(path.join(inFolder, '**', '*MTL.txt'), recursive=True)
         dfMTL = pd.DataFrame(data={'mtl': mtlList})
         dfMTL['PR'] = [int(path.basename(mtl).split('_')[2]) for mtl in dfMTL.mtl]
+        dfMTL['pid'] = [path.basename(mtl).split('_MTL')[0] for mtl in dfMTL.mtl]
         dfMTL.to_csv(cachMTLname, index=False)
     if path.exists(prList):
         print('using PR List.\n')
         dfTodoPr = pd.read_csv(prList)
         dfMTL = dfMTL.loc[dfMTL.PR.isin(dfTodoPr.PR)]
+    if path.exists(goodThumbDir):
+        print('using good thumb filter.\n')
+        goodpid = glob(path.join(goodThumbDir, '*.jpg'))
+        pids = [path.basename(i)[:-4] for i in goodpid]
+        dfMTL = dfMTL.loc[dfMTL.pid.isin(pids)]
     if args.DEBUG:
         for mtl in dfMTL.mtl:
             toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb)
@@ -560,6 +567,8 @@ if __name__ == '__main__':
                         help='output directory')
     parser.add_argument('--pr', metavar='path row filter', dest='path_row', required=False,
                         default='', help='path row list ')
+    parser.add_argument('--gooddir', metavar='good dir pid filter', dest='goodThumbDir', required=False,
+                        default='', help='good dir pid filter ')
     parser.add_argument('-m', metavar='multi_process', dest='n_multi', required=False, type=int,
                         default=20, help='band(s) to mask')
     parser.add_argument('--overwrite', action='store_true', dest='OVERWRITE')
