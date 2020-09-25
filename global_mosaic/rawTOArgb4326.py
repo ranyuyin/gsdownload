@@ -460,7 +460,7 @@ class LandsatDst:
         self.yLow = metadata['PRODUCT_METADATA']['CORNER_LR_LAT_PRODUCT']
         self.count = len(self.bands)
         self.tempOutName = path.join(envs['temp'], self.pid + '_out.tif')
-        if self.xLeft * self.xRight < 0:
+        if (self.xLeft * self.xRight) < 0 and (self.xRight < self.xLeft):
             self.cross180 = True
         else:
             self.cross180 = False
