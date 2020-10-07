@@ -76,12 +76,15 @@ def getOname(pid, outFolder, suffix=''):
     return path.join(outFolder, pid + '_4mosaic{}.pix'.format(suffix))
 
 
-def toMosaic(mtlFile, outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb):
+def toMosaic(mtlFile, outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb, debug=False):
     landsatIm = LandsatDst(mtlFile, maprgb)
-    try:
+    if debug:
         landsatIm.prepareMosaic(outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
-    except:
-        print(landsatIm.pid)
+    else:
+        try:
+            landsatIm.prepareMosaic(outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
+        except:
+            print(landsatIm.pid)
     return
 
 
@@ -404,8 +407,9 @@ def _main(args):
         pids = [path.basename(i)[:-4] for i in goodpid]
         dfMTL = dfMTL.loc[dfMTL.pid.isin(pids)]
     if args.DEBUG:
+        envs['temp'] = os.environ['temp']
         for mtl in dfMTL.mtl:
-            toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb)
+            toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb, args.DEBUG)
     else:
         p = Pool(n_multi)
         try:
