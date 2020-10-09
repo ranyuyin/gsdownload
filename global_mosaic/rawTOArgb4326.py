@@ -1,4 +1,6 @@
 import argparse
+import traceback
+
 import rasterio as rio
 from functools import partial
 from multiprocessing import Pool
@@ -397,6 +399,7 @@ def _main(args):
         dfMTL['PR'] = [int(path.basename(mtl).split('_')[2]) for mtl in dfMTL.mtl]
         dfMTL['pid'] = [path.basename(mtl).split('_MTL')[0] for mtl in dfMTL.mtl]
         dfMTL.to_csv(cachMTLname, index=False)
+    dfMTL = dfMTL.drop_duplicates(subset=['pid'])
     if path.exists(prList):
         print('using PR List.\n')
         dfTodoPr = pd.read_csv(prList)
@@ -408,8 +411,11 @@ def _main(args):
         dfMTL = dfMTL.loc[dfMTL.pid.isin(pids)]
     if args.DEBUG:
         envs['temp'] = os.environ['temp']
-        for mtl in dfMTL.mtl:
-            toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb, args.DEBUG)
+        for mtl in tqdm(dfMTL.mtl):
+            try:
+                toMosaic(mtl,outFolder,maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb, args.DEBUG)
+            except Exception as e:
+                traceback.print_exc()
     else:
         p = Pool(n_multi)
         try:
@@ -419,6 +425,19 @@ def _main(args):
         except KeyboardInterrupt:
             p.terminate()
             p.join()
+
+def getLeft(x1,x2):
+    if (max(x1, x2) - min(x1, x2)) > 180:
+        return max(x1, x2)
+    else:
+        return min(x1, x2)
+
+
+def getRight(x1,x2):
+    if (max(x1, x2) - min(x1, x2)) > 180:
+        return min(x1, x2)
+    else:
+        return max(x1, x2)
 
 
 class LandsatDst:
@@ -458,13 +477,19 @@ class LandsatDst:
                   ['REFLECTANCE_ADD_BAND_{}'.format(b)]
                   for b in self.bands]
         self.E = metadata['IMAGE_ATTRIBUTES']['SUN_ELEVATION']
-        self.xLeft = metadata['PRODUCT_METADATA']['CORNER_LL_LON_PRODUCT']
-        self.xRight = metadata['PRODUCT_METADATA']['CORNER_UR_LON_PRODUCT']
-        self.yUp = metadata['PRODUCT_METADATA']['CORNER_UL_LAT_PRODUCT']
-        self.yLow = metadata['PRODUCT_METADATA']['CORNER_LR_LAT_PRODUCT']
+        PRODUCT_META = metadata['PRODUCT_METADATA']
+        LL_LON, LL_LAT = PRODUCT_META['CORNER_LL_LON_PRODUCT'], PRODUCT_META['CORNER_LL_LAT_PRODUCT']
+        UL_LON, UL_LAT = PRODUCT_META['CORNER_UL_LON_PRODUCT'], PRODUCT_META['CORNER_UL_LAT_PRODUCT']
+        UR_LON, UR_LAT = PRODUCT_META['CORNER_UR_LON_PRODUCT'], PRODUCT_META['CORNER_UR_LAT_PRODUCT']
+        LR_LON, LR_LAT = PRODUCT_META['CORNER_LR_LON_PRODUCT'], PRODUCT_META['CORNER_LR_LAT_PRODUCT']
+
+        self.xLeft = getLeft(LL_LON, UL_LON)
+        self.xRight = getRight(UR_LON, LR_LON)
+        self.yUp = max(UL_LAT, UR_LAT)
+        self.yLow = min(LR_LAT, LL_LAT)
         self.count = len(self.bands)
         self.tempOutName = path.join(envs['temp'], self.pid + '_out.tif')
-        if (self.xLeft * self.xRight) < 0 and (self.xRight < self.xLeft):
+        if (max(self.xLeft, self.xRight) - min(self.xLeft, self.xRight)) > 180:
             self.cross180 = True
         else:
             self.cross180 = False
