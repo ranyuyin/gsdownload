@@ -79,7 +79,11 @@ def getOname(pid, outFolder, suffix=''):
 
 
 def toMosaic(mtlFile, outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp, maprgb, debug=False):
-    landsatIm = LandsatDst(mtlFile, maprgb)
+    try:
+        landsatIm = LandsatDst(mtlFile, maprgb)
+    except:
+        print(mtlFile)
+        return
     if debug:
         landsatIm.prepareMosaic(outFolder, maskCloud, OVERWRITE, pixel_sunangle, keppTemp)
     else:
