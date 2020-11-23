@@ -10,6 +10,7 @@ if __name__ == '__main__':
                         required=False, default=r'Z:\yinry\Landsat.Data\GOOGLE\landsat_index.csv.gz')
     parser.add_argument('-o', help='output url list file', dest='ourllist', required=False, default='')
     parser.add_argument('-f', help='list file', dest='listfile', action='store_true')
+    parser.add_argument('-r', help='includeRT', dest='useRT', action='store_true')
     args = parser.parse_args()
     if args.listfile:
         jpglist = [path.basename(i.strip()) for i in open(args.thmdir).readlines()]
@@ -23,4 +24,6 @@ if __name__ == '__main__':
     else:
         odir, oname = path.split(args.thmdir)
         ourlpath = path.join(odir, oname + '_url.txt')
+    if not args.useRT:
+        df = df.loc[df.COLLECTION_CATEGORY != 'RT']
     df.BASE_URL.to_csv(ourlpath, index=False, header=False)
