@@ -7,6 +7,7 @@ from skimage import io
 import numpy as np
 from datetime import datetime
 import wget
+import tkinter as tk
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
@@ -250,6 +251,10 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
     bestlist = p.map(partial(one_best_worker, date_start=date_start, date_end=date_end, df=df, thumb_root=thumb_root, copydir=copydir,
                     ignoreSLCoff=ignoreSLCoff, debug=debug, datepaser=datepaser), list(zip(ref_path_list, m_start_list, m_end_list)))
     return bestlist
+
+class ThumbHistApp():
+    def __init__(self):
+        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Get best scene automatically')
