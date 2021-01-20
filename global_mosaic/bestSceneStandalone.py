@@ -254,7 +254,7 @@ def BestsceneWoker(ref_root, prlistfile, date_start, date_end, thumb_root,
 
 class ThumbHistApp():
     def __init__(self):
-        
+        pass
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Get best scene automatically')
