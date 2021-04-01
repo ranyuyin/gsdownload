@@ -39,8 +39,9 @@ def GetMetaDf(candiFL, SLCoff=False):
 if __name__ == '__main__':
     metaDir = r'Z:\yinry\0.DEFINITION\LandsatMetaDataUSGS'
     # candiL = ['MSS', 'TM', 'ETM', '8']
-    candiL = ['TM', 'ETM', '8']
-    candiL = ['ETM']
+    # candiL = ['TM', 'ETM', '8']
+    # candiL = ['ETM']
+    candiL = ['8']
     candiFL = [path.join(metaDir, 'LANDSAT_{}_C1.csv.gz'.format(i)) for i in candiL]
     dfMeta = GetMetaDf(candiFL)
     parser = argparse.ArgumentParser(description='Get thumbnails by pr')
